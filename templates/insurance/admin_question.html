@@ -1,75 +1,38 @@
-{% extends 'insurance/adminbase.html' %}
+{% extends 'insurance/_base.html' %}
+{% block page_title %}Questions{% endblock %}
 {% block content %}
-{%load static%}
+<h1>Customer questions</h1>
 
-<head>
-  <!-- <link href="//netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap.min.css" rel="stylesheet" id="bootstrap-css"> -->
-  <link href="http://netdna.bootstrapcdn.com/bootstrap/4.0.0-beta/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css">
-    <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css" rel="stylesheet">
-  <script src="//netdna.bootstrapcdn.com/bootstrap/3.0.0/js/bootstrap.min.js"></script>
-  <script src="//code.jquery.com/jquery-1.11.1.min.js"></script>
-
-  <style media="screen">
-    a:link {
-      text-decoration: none;
-    }
-
-    h6 {
-      text-align: center;
-    }
-
-    .row {
-      margin: 100px;
-    }
-
-       label #sidebar_btn {
-      z-index: 1;
-      color: #fff;
-      position: fixed;
-      cursor: pointer;
-      left: 300px;
-      padding-left: 60px;
-      margin-top:15px;
-      font-size: 20px;
-      
-      transition: 0.5s;
-      transition-property: color;
-    }
-  </style>
-</head>
-
-<div class="container">
-  <div class="panel panel-primary">
-    <div class="panel-heading">
-      <h4 class="text-center">Questions</h4>
+<div class="card">
+  <form method="get" class="form-inline">
+    <div class="field"><label>Search</label><input type="search" name="q" value="{{ q }}" placeholder="Text or customer"></div>
+    <div class="field"><label>State</label>
+      <select name="answered">
+        <option value="">All</option>
+        <option value="0" {% if answered == '0' %}selected{% endif %}>Unanswered</option>
+        <option value="1" {% if answered == '1' %}selected{% endif %}>Answered</option>
+      </select>
     </div>
-    <table class="table table-hover table-bordered table-striped" id="dev-table">
-      <thead class="thead-dark">
-        <tr>
-            <th>#</th>
-          <th>Customer</th>
-          <th> Problem</th>
-          <th> Reply</th>
-
-          <th> Asked Date</th>
-             <th>Update</th>
-        </tr>
-      </thead>
-      {% for t in questions %}
-      <tr>
-        <td> {{ forloop.counter }}</td>
-        <td> {{t.customer}}</td>
-        <td> {{t.description}}</td>
-        <td> {{t.admin_comment}}</td>
-        <td> {{t.asked_date}}</td>
-        
-        <td><a class="btn btn-success btn-sm" href="{% url 'update-question' t.id  %}"><span class="fa fa-edit"></span></a></td>
-      </tr>
-      {% endfor %}
-    </table>
-  </div>
+    <button class="btn btn--primary" type="submit">Filter</button>
+  </form>
 </div>
 
-<br><br><br><br><br><br>
-{% endblock content %}
+{% if page_obj.object_list %}
+  {% for q in page_obj %}
+  <div class="card">
+    <div class="card__header">
+      <span class="card__title">{{ q.customer.get_name }}
+        <span class="text-muted">&middot; {{ q.created_at|date:"M j, Y" }}</span></span>
+      <span class="badge {% if q.is_answered %}badge--approved{% else %}badge--pending{% endif %}">
+        {% if q.is_answered %}Answered{% else %}Unanswered{% endif %}</span>
+    </div>
+    <p><strong>Q:</strong> {{ q.description }}</p>
+    {% if q.admin_comment %}<p><strong>A:</strong> {{ q.admin_comment }}</p>{% endif %}
+    <a class="btn btn--sm btn--primary" href="{% url 'update-question' q.pk %}">{% if q.is_answered %}Edit reply{% else %}Reply{% endif %}</a>
+  </div>
+  {% endfor %}
+  {% include 'partials/_pagination.html' %}
+{% else %}
+<div class="card"><div class="empty"><div class="empty__icon">💬</div><p>No questions found.</p></div></div>
+{% endif %}
+{% endblock %}

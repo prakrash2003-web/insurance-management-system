@@ -1,0 +1,34 @@
+{% extends 'customer/_base.html' %}
+{% load app_extras %}
+{% block page_title %}Renewals{% endblock %}
+{% block content %}
+<h1>Policy renewals</h1>
+<p class="text-muted">Approved policies show their cover period. You can renew when a policy is due or has expired.</p>
+
+{% if records %}
+<div class="table-wrap">
+  <table class="data">
+    <thead><tr><th>Policy</th><th>Cover end</th><th>Days left</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+      {% for r in records %}
+      <tr>
+        <td>{{ r.policy.policy_name }}</td>
+        <td>{{ r.end_date }}</td>
+        <td>{{ r.days_to_expiry }}</td>
+        <td><span class="badge {{ r.renewal_status|badge_class }}">{{ r.renewal_status.label }}</span></td>
+        <td>
+          {% if r.renewal_status == 'Due' or r.renewal_status == 'Expired' %}
+          <form method="post" action="{% url 'renew' r.pk %}" data-confirm="Renew {{ r.policy.policy_name }} for another {{ r.policy.tenure }} years?">
+            {% csrf_token %}<button class="btn btn--sm btn--primary" type="submit">Renew</button>
+          </form>
+          {% else %}<span class="text-muted">Not due</span>{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="card"><div class="empty"><div class="empty__icon">🔄</div><p>No approved policies to renew yet.</p></div></div>
+{% endif %}
+{% endblock %}

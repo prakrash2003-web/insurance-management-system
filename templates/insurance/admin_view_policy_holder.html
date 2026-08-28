@@ -1,73 +1,57 @@
-{% extends 'insurance/adminbase.html' %}
+{% extends 'insurance/_base.html' %}
+{% load app_extras %}
+{% block page_title %}{{ heading|default:"Applications" }}{% endblock %}
 {% block content %}
-{%load static%}
+<h1>{{ heading|default:"Applications" }}</h1>
 
-<head>
-  <link href="http://netdna.bootstrapcdn.com/bootstrap/4.0.0-beta/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css">
-    <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css" rel="stylesheet">
-  <script src="//netdna.bootstrapcdn.com/bootstrap/3.0.0/js/bootstrap.min.js"></script>
-  <script src="//code.jquery.com/jquery-1.11.1.min.js"></script>
-
-  <style media="screen">
-    a:link {
-      text-decoration: none;
-    }
-
-    h6 {
-      text-align: center;
-    }
-
-    .row {
-      margin: 100px;
-    }
-  </style>
-</head>
-
-<div class="container">
-  <div class="panel panel-primary">
-    <div class="panel-heading">
-      <h4 class="text-center">Policy Holder Record</h4>
+<div class="card">
+  <form method="get" class="form-inline">
+    <div class="field"><label>Search</label><input type="search" name="q" value="{{ q }}" placeholder="Customer or policy"></div>
+    {% if statuses %}
+    <div class="field"><label>Status</label>
+      <select name="status">
+        <option value="">All</option>
+        {% for value, label in statuses %}<option value="{{ value }}" {% if selected_status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+      </select>
     </div>
-    <table class="table table-hover table-bordered table-striped" id="dev-table">
-      <thead class="thead-dark">
-        <tr>
-        <th>#</th>
-          <th>Policy</th>
-          <th>Customer</th>
-          <th> Applied Date</th>
-          <th>Status</th>
-          <th class="text-right">Action</th>
-        </tr>
-      </thead>
-      {% for t in policyrecords %}
-      <tr>
-        <td> {{ forloop.counter }}</td>
-        <td> {{t.Policy}}</td>
-        <td> {{t.customer}}</td>
-        
-        <td>{{t.creation_date}}</td>
-        <td>{{t.status}}</td>
-
-                    {% if t.status == 'Pending' %}
-                <td class="text-right">
-                    <button class="btn btn-success btn-sm badge-pill" style="width: 120px;"><a  style="text-decoration: none;color: white;" href="{% url 'approve-request' t.id  %}">Approve</a> </button>
-                    <button class="btn btn-danger btn-sm badge-pill" style="width: 80px;"><a  style="text-decoration: none;color: white;" href="{% url 'reject-request' t.id  %}">Reject</a> </button>
-                </td>              
-
-                {% else %}
-                <td class="text-right">
-                <span style="color:red;font-size:18px;" class="label success">{{t.status}}</span></td>
-                
-
-                {% endif %}
-
-
-      </tr>
-      {% endfor %}
-    </table>
-  </div>
+    {% endif %}
+    <button class="btn btn--primary" type="submit">Filter</button>
+  </form>
 </div>
 
-<br><br><br><br><br><br>
-{% endblock content %}
+{% if page_obj.object_list %}
+<div class="table-wrap">
+  <table class="data">
+    <thead><tr><th>Customer</th><th>Policy</th><th>Applied</th><th>Status</th><th>Cover period</th><th>Actions</th></tr></thead>
+    <tbody>
+      {% for r in page_obj %}
+      <tr>
+        <td>{{ r.customer.get_name }}</td>
+        <td>{{ r.policy.policy_name }}</td>
+        <td>{{ r.created_at|date:"M j, Y" }}</td>
+        <td><span class="badge {{ r.status|badge_class }}">{{ r.status }}</span></td>
+        <td>{% if r.start_date %}{{ r.start_date }} &ndash; {{ r.end_date }}{% else %}&mdash;{% endif %}</td>
+        <td class="btn-row">
+          {% if r.status != 'Approved' %}
+          <form method="post" action="{% url 'approve-request' r.pk %}" data-confirm="Approve this application?">
+            {% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
+            <button class="btn btn--sm btn--success" type="submit">Approve</button>
+          </form>
+          {% endif %}
+          {% if r.status != 'Disapproved' %}
+          <form method="post" action="{% url 'reject-request' r.pk %}" data-confirm="Reject this application?">
+            {% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
+            <button class="btn btn--sm btn--danger" type="submit">Reject</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% include 'partials/_pagination.html' %}
+{% else %}
+<div class="card"><div class="empty"><div class="empty__icon">🗂️</div><p>No applications found.</p></div></div>
+{% endif %}
+{% endblock %}

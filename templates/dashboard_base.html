@@ -1,0 +1,45 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ page_title|default:"Dashboard" }} &middot; InsuranceMS{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="sidebar__brand">Insurance<span>MS</span></div>
+    <nav class="sidebar__nav">
+      {% block sidebar_nav %}{% endblock %}
+    </nav>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <div style="display:flex;align-items:center;gap:.75rem">
+        <button class="menu-toggle" data-menu-toggle aria-label="Toggle menu">&#9776;</button>
+        <span class="topbar__title">{% block page_title %}{{ page_title }}{% endblock %}</span>
+      </div>
+      <div class="topbar__right">
+        <a href="{% url 'notifications' %}" title="Notifications">
+          &#128276;{% if unread_notification_count %} <span class="badge badge--danger">{{ unread_notification_count }}</span>{% endif %}
+        </a>
+        <span class="text-muted">{{ user.get_full_name|default:user.username }}</span>
+        <form action="{% url 'logout' %}" method="post" style="display:inline">{% csrf_token %}
+          <button class="btn btn--sm" type="submit">Log out</button>
+        </form>
+      </div>
+    </header>
+
+    <div class="content">
+      {% include 'partials/_messages.html' %}
+      {% block content %}{% endblock %}
+    </div>
+  </div>
+</div>
+{% include 'partials/_confirm_modal.html' %}
+<script src="{% static 'js/app.js' %}"></script>
+</body>
+</html>

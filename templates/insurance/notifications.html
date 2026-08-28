@@ -1,0 +1,36 @@
+{% extends 'dashboard_base.html' %}
+{% block page_title %}Notifications{% endblock %}
+{% block sidebar_nav %}
+  {% if user.is_staff %}{% include 'insurance/_nav_admin.html' %}{% else %}{% include 'customer/_nav.html' %}{% endif %}
+{% endblock %}
+{% block content %}
+<div class="card__header">
+  <h1 class="mb-0">Notifications</h1>
+  <form method="post" action="{% url 'notification-read-all' %}">{% csrf_token %}
+    <button class="btn btn--sm" type="submit">Mark all read</button>
+  </form>
+</div>
+
+{% if page_obj.object_list %}
+  {% for n in page_obj %}
+  <div class="card" style="{% if not n.is_read %}border-left:3px solid var(--accent){% endif %}">
+    <div class="card__header">
+      <span>{{ n.message }}</span>
+      <span class="text-muted">{{ n.created_at|timesince }} ago</span>
+    </div>
+    <div class="btn-row">
+      {% if n.url %}<a class="btn btn--sm" href="{{ n.url }}">Open</a>{% endif %}
+      {% if not n.is_read %}
+      <form method="post" action="{% url 'notification-read' n.pk %}">{% csrf_token %}
+        <input type="hidden" name="next" value="{% url 'notifications' %}">
+        <button class="btn btn--sm btn--ghost" type="submit">Mark read</button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+  {% include 'partials/_pagination.html' %}
+{% else %}
+<div class="card"><div class="empty"><div class="empty__icon">🔔</div><p>No notifications.</p></div></div>
+{% endif %}
+{% endblock %}

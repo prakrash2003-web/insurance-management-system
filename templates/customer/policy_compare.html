@@ -1,0 +1,37 @@
+{% extends 'customer/_base.html' %}
+{% load humanize %}
+{% block page_title %}Compare policies{% endblock %}
+{% block content %}
+<h1>Compare policies</h1>
+
+<div class="card">
+  <form data-compare-form="{% url 'policy-compare' %}">
+    <p class="text-muted">Select 2&ndash;4 policies.</p>
+    <div class="grid grid--3">
+      {% for p in all_policies %}
+        <label style="font-weight:500"><input type="checkbox" name="compare" value="{{ p.id }}"
+          {% if p in policies %}checked{% endif %}> {{ p.policy_name }}</label>
+      {% endfor %}
+    </div>
+    <button class="btn btn--primary" type="submit" style="margin-top:.75rem">Compare</button>
+  </form>
+</div>
+
+{% if policies|length >= 2 %}
+<div class="table-wrap">
+  <table class="data">
+    <thead><tr><th>Attribute</th>{% for p in policies %}<th>{{ p.policy_name }}</th>{% endfor %}</tr></thead>
+    <tbody>
+      <tr><td>Category</td>{% for p in policies %}<td>{{ p.category.category_name }}</td>{% endfor %}</tr>
+      <tr><td>Sum assured</td>{% for p in policies %}<td>{{ p.sum_assurance|intcomma }}</td>{% endfor %}</tr>
+      <tr><td>Annual premium</td>{% for p in policies %}<td>{{ p.premium|intcomma }}</td>{% endfor %}</tr>
+      <tr><td>Tenure (years)</td>{% for p in policies %}<td>{{ p.tenure }}</td>{% endfor %}</tr>
+      <tr><td>Premium rate</td>{% for p in policies %}<td>{{ p.annual_premium_rate }}</td>{% endfor %}</tr>
+      <tr><td></td>{% for p in policies %}<td><a class="btn btn--sm btn--primary" href="{% url 'policy-detail' p.pk %}">Details</a></td>{% endfor %}</tr>
+    </tbody>
+  </table>
+</div>
+{% elif policies %}
+<p class="text-muted">Select at least two policies to see a comparison.</p>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,22 @@
+{% extends 'customer/_base.html' %}
+{% load humanize app_extras %}
+{% block page_title %}Claim #{{ claim.id }}{% endblock %}
+{% block content %}
+<p><a href="{% url 'claim-list' %}">&larr; Back to claims</a></p>
+<div class="card">
+  <div class="card__header">
+    <h1 class="mb-0">Claim #{{ claim.id }}</h1>
+    <span class="badge {{ claim.status|badge_class }}">{{ claim.status }}</span>
+  </div>
+  <dl class="definition">
+    <dt>Policy</dt><dd>{{ claim.policy_record.policy.policy_name }}</dd>
+    <dt>Claim amount</dt><dd>{{ claim.claim_amount|intcomma }}</dd>
+    <dt>Filed on</dt><dd>{{ claim.created_at|date:"F j, Y" }}</dd>
+    <dt>Last updated</dt><dd>{{ claim.updated_at|date:"F j, Y" }}</dd>
+  </dl>
+  <p><strong>Description</strong><br>{{ claim.description|linebreaksbr }}</p>
+  {% if claim.admin_remarks %}
+    <p class="mb-0"><strong>Administrator remarks</strong><br>{{ claim.admin_remarks|linebreaksbr }}</p>
+  {% endif %}
+</div>
+{% endblock %}

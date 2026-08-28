@@ -1,75 +1,41 @@
-{% extends 'insurance/adminbase.html' %}
+{% extends 'insurance/_base.html' %}
+{% block page_title %}Customers{% endblock %}
 {% block content %}
-{%load static%}
+<h1>Customers</h1>
 
-<head>
-  <link href="http://netdna.bootstrapcdn.com/bootstrap/4.0.0-beta/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css">
-    <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css" rel="stylesheet">
-  <script src="//netdna.bootstrapcdn.com/bootstrap/3.0.0/js/bootstrap.min.js"></script>
-  <script src="//code.jquery.com/jquery-1.11.1.min.js"></script>
-
-  <style media="screen">
-    a:link {
-      text-decoration: none;
-    }
-
-    h6 {
-      text-align: center;
-    }
-
-    .row {
-      margin: 100px;
-    }
-    label #sidebar_btn {
-      z-index: 1;
-      color: #fff;
-      position: fixed;
-      cursor: pointer;
-      left: 300px;
-      padding-left: 60px;
-      margin-top:15px;
-      font-size: 20px;
-      
-      transition: 0.5s;
-      transition-property: color;
-    }
-  </style>
-</head>
-
-<div class="container">
-  <div class="panel panel-primary">
-    <div class="panel-heading">
-      <h4 class="text-center">Customers</h4>
-    </div>
-    <table class="table table-hover table-bordered table-striped" id="dev-table">
-      <thead class="thead-dark">
-        <tr>
-
-          <th>Name</th>
-          <th>Profile Picture</th>
-          <th>Contact</th>
-          <th>Address</th>
-         
-          <th>Update</th>
-          <th>Delete</th>
-        </tr>
-      </thead>
-      {% for t in customers %}
-      <tr>
-
-        <td> {{t.get_name}}</td>
-        <td> <img src="{% static t.profile_pic.url %}" alt="Profile Pic" height="40px" width="40px" /></td>
-        <td>{{t.mobile}}</td>
-        <td>{{t.address}}</td>
-        
-        <td><a class="btn btn-success btn-sm" href="{% url 'update-customer' t.id  %}"><span class="fa fa-edit"></span></a></td>
-        <td><a class="btn btn-danger btn-sm" href="{% url 'delete-customer' t.id  %}"><span class="fa fa-trash"></span></a></td>
-      </tr>
-      {% endfor %}
-    </table>
-  </div>
+<div class="card">
+  <form method="get" class="form-inline">
+    <div class="field"><label>Search</label>
+      <input type="search" name="q" value="{{ q }}" placeholder="Name, username, email or mobile"></div>
+    <button class="btn btn--primary" type="submit">Search</button>
+    {% if q %}<a class="btn btn--ghost" href="{% url 'admin-view-customer' %}">Clear</a>{% endif %}
+  </form>
 </div>
 
-<br><br><br><br><br><br>
-{% endblock content %}
+{% if page_obj.object_list %}
+<div class="table-wrap">
+  <table class="data">
+    <thead><tr><th>Name</th><th>Username</th><th>Email</th><th>Mobile</th><th>Applications</th><th>Joined</th><th></th></tr></thead>
+    <tbody>
+      {% for c in page_obj %}
+      <tr>
+        <td>{{ c.get_name }}</td>
+        <td>{{ c.user.username }}</td>
+        <td>{{ c.user.email }}</td>
+        <td>{{ c.mobile }}</td>
+        <td>{{ c.record_count }}</td>
+        <td>{{ c.created_at|date:"M j, Y" }}</td>
+        <td class="btn-row">
+          <a class="btn btn--sm" href="{% url 'update-customer' c.pk %}">Edit</a>
+          <a class="btn btn--sm btn--danger" href="{% url 'delete-customer' c.pk %}">Delete</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% include 'partials/_pagination.html' %}
+{% else %}
+<div class="card"><div class="empty"><div class="empty__icon">👥</div><p>No customers found.</p></div></div>
+{% endif %}
+{% endblock %}

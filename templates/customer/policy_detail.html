@@ -1,0 +1,28 @@
+{% extends 'customer/_base.html' %}
+{% load humanize app_extras %}
+{% block page_title %}{{ policy.policy_name }}{% endblock %}
+{% block content %}
+<p><a href="{% url 'policy-list' %}">&larr; Back to policies</a></p>
+<div class="card">
+  <span class="badge badge--info">{{ policy.category.category_name }}</span>
+  <h1 style="margin-top:.5rem">{{ policy.policy_name }}</h1>
+  {% if policy.description %}<p class="text-muted">{{ policy.description }}</p>{% endif %}
+  <dl class="definition">
+    <dt>Sum assured</dt><dd>{{ policy.sum_assurance|intcomma }}</dd>
+    <dt>Annual premium</dt><dd>{{ policy.premium|intcomma }}</dd>
+    <dt>Tenure</dt><dd>{{ policy.tenure }} years</dd>
+    <dt>Premium rate</dt><dd>{{ policy.annual_premium_rate }} of sum assured</dd>
+  </dl>
+
+  {% if existing and existing.status != 'Disapproved' %}
+    <p style="margin-top:1rem">You have an application for this policy:
+      <span class="badge {{ existing.status|badge_class }}">{{ existing.status }}</span></p>
+    <a class="btn" href="{% url 'application-detail' existing.pk %}">View application</a>
+  {% else %}
+    <form method="post" action="{% url 'apply' policy.pk %}" style="margin-top:1rem">
+      {% csrf_token %}
+      <button class="btn btn--primary" type="submit">Apply for this policy</button>
+    </form>
+  {% endif %}
+</div>
+{% endblock %}

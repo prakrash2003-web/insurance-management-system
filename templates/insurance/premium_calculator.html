@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{% block title %}Premium calculator &middot; InsuranceMS{% endblock %}
+{% block content %}
+<h1>Premium calculator</h1>
+<p class="text-muted">An estimate based on published rules &mdash; the actual premium of a
+listed policy is set by the provider.</p>
+
+<div class="grid grid--2">
+  <div class="card">
+    <form method="get" class="form">
+      {% include 'partials/_form.html' %}
+      <button class="btn btn--primary" type="submit">Estimate premium</button>
+    </form>
+  </div>
+
+  {% if result %}
+  <div class="card">
+    <div class="card__title">Estimated annual premium</div>
+    <p style="font-size:2rem;font-weight:700;margin:.2rem 0">{{ result.estimated_annual_premium }}</p>
+    <p class="text-muted">≈ {{ result.estimated_monthly_premium }} / month &middot;
+      {{ result.total_over_tenure }} over the full tenure</p>
+    <div class="table-wrap" style="margin-top:.75rem">
+      <table class="data">
+        <thead><tr><th>Step</th><th>Basis</th><th>Effect</th></tr></thead>
+        <tbody>
+          {% for label, basis, effect in result.breakdown %}
+          <tr><td>{{ label }}</td><td>{{ basis }}</td><td>{{ effect }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
