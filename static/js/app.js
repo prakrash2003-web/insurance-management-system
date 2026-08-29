@@ -2,6 +2,12 @@
 (function () {
   "use strict";
 
+  // Mirror the page name (from <title>) into the topbar heading.
+  var pageTitleEl = document.querySelector("[data-page-title]");
+  if (pageTitleEl) {
+    pageTitleEl.textContent = document.title.split("·")[0].trim();
+  }
+
   // Mobile sidebar toggle
   var toggle = document.querySelector("[data-menu-toggle]");
   var sidebar = document.querySelector(".sidebar");

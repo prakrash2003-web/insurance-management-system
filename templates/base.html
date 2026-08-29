@@ -9,7 +9,8 @@
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
 </head>
 <body>
-  <nav class="navbar">
+  <a href="#main-content" class="skip-link">Skip to content</a>
+  <nav class="navbar" aria-label="Primary">
     <a class="navbar__brand" href="{% url 'home' %}">Insurance<span style="color:var(--accent)">MS</span></a>
     <div class="navbar__links">
       <a href="{% url 'premium-calculator' %}">Premium calculator</a>
@@ -27,7 +28,7 @@
     </div>
   </nav>
 
-  <main class="public-content">
+  <main class="public-content" id="main-content">
     {% include 'partials/_messages.html' %}
     {% block content %}{% endblock %}
   </main>

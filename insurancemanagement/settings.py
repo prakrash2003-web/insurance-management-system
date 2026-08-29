@@ -5,11 +5,16 @@ All environment-specific / secret values are read from the environment
 (optionally via a local ``.env`` file). See ``.env.example`` for the full list.
 """
 
+import warnings
 from pathlib import Path
 
 import environ
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# WhiteNoise logs a cosmetic warning when STATIC_ROOT has not been populated by
+# `collectstatic` yet (e.g. during tests). Files are still served via finders.
+warnings.filterwarnings("ignore", message="No directory at", category=UserWarning)
 
 # --- Environment -------------------------------------------------------------
 env = environ.Env(
@@ -127,13 +132,15 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
-# WhiteNoise serves collected static files (with compression) when DEBUG is
-# False, so the app works without a separate web server. No hashed-manifest
-# storage, so `{% static %}` never needs `collectstatic` to have run first.
+# WhiteNoise serves static files (with compression) when DEBUG is False, so the
+# app works without a separate web server. USE_FINDERS lets it serve straight
+# from the source dirs, so neither `runserver` nor the test suite needs
+# `collectstatic` to have run first (production still runs it - see README).
 STORAGES = {
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
     "staticfiles": {"BACKEND": "whitenoise.storage.CompressedStaticFilesStorage"},
 }
+WHITENOISE_USE_FINDERS = True
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 

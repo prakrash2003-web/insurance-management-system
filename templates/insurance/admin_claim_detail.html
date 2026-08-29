@@ -1,11 +1,15 @@
 {% extends 'insurance/_base.html' %}
-{% load humanize %}
+{% load humanize app_extras %}
 {% block page_title %}Claim #{{ claim.id }}{% endblock %}
 {% block content %}
 <p><a href="{% url 'admin-claims' %}">&larr; Back to claims</a></p>
+<div class="card__header">
+  <h1 class="mb-0">Claim #{{ claim.id }}</h1>
+  <span class="badge {{ claim.status|badge_class }}">{{ claim.status }}</span>
+</div>
 <div class="grid grid--2">
   <div class="card">
-    <h2>Claim #{{ claim.id }}</h2>
+    <h2>Details</h2>
     <dl class="definition">
       <dt>Customer</dt><dd>{{ claim.customer.get_name }} ({{ claim.customer.user.email }})</dd>
       <dt>Policy</dt><dd>{{ claim.policy_record.policy.policy_name }}</dd>
