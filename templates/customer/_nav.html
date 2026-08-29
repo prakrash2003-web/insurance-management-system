@@ -1,0 +1,16 @@
+{% with n=request.resolver_match.url_name %}
+<a href="{% url 'customer-dashboard' %}" class="{% if n == 'customer-dashboard' %}is-active{% endif %}">Dashboard</a>
+<div class="sidebar__section">Policies</div>
+<a href="{% url 'policy-list' %}" class="{% if n == 'policy-list' or n == 'policy-detail' %}is-active{% endif %}">Browse policies</a>
+<a href="{% url 'policy-compare' %}" class="{% if n == 'policy-compare' %}is-active{% endif %}">Compare policies</a>
+<a href="{% url 'recommendations' %}" class="{% if n == 'recommendations' %}is-active{% endif %}">Recommendations</a>
+<a href="{% url 'premium-calculator' %}">Premium calculator</a>
+<div class="sidebar__section">My account</div>
+<a href="{% url 'history' %}" class="{% if n == 'history' or n == 'application-detail' %}is-active{% endif %}">Applications</a>
+<a href="{% url 'renewals' %}" class="{% if n == 'renewals' %}is-active{% endif %}">Renewals</a>
+<a href="{% url 'claim-list' %}" class="{% if 'claim' in n %}is-active{% endif %}">Claims</a>
+<a href="{% url 'question-history' %}" class="{% if 'question' in n %}is-active{% endif %}">Questions</a>
+<div class="sidebar__section">Settings</div>
+<a href="{% url 'customer-profile' %}" class="{% if 'profile' in n %}is-active{% endif %}">Profile</a>
+<a href="{% url 'password_change' %}">Change password</a>
+{% endwith %}

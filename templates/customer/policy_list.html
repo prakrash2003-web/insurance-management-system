@@ -1,0 +1,49 @@
+{% extends 'customer/_base.html' %}
+{% load humanize app_extras %}
+{% block page_title %}Browse policies{% endblock %}
+{% block content %}
+<div class="card__header"><h1 class="mb-0">Policies</h1>
+  <a class="btn" href="{% url 'policy-compare' %}">Compare policies</a></div>
+
+<div class="card">
+  <form method="get" class="form-inline">
+    <div class="field"><label>Search</label><input type="search" name="q" value="{{ q }}" placeholder="Policy name"></div>
+    <div class="field"><label>Category</label>
+      <select name="category">
+        <option value="">All categories</option>
+        {% for c in categories %}
+          <option value="{{ c.id }}" {% if selected_category == c.id|stringformat:'s' %}selected{% endif %}>{{ c.category_name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button class="btn btn--primary" type="submit">Filter</button>
+    {% if q or selected_category %}<a class="btn btn--ghost" href="{% url 'policy-list' %}">Reset</a>{% endif %}
+  </form>
+</div>
+
+<form data-compare-form="{% url 'policy-compare' %}">
+{% if page_obj.object_list %}
+<div class="grid grid--3">
+  {% for p in page_obj %}
+  <div class="card">
+    <span class="badge badge--info">{{ p.category.category_name }}</span>
+    <h3 style="margin-top:.5rem"><a href="{% url 'policy-detail' p.pk %}">{{ p.policy_name }}</a></h3>
+    <dl class="definition" style="grid-template-columns:120px 1fr">
+      <dt>Sum assured</dt><dd>{{ p.sum_assurance|intcomma }}</dd>
+      <dt>Premium/yr</dt><dd>{{ p.premium|intcomma }}</dd>
+      <dt>Tenure</dt><dd>{{ p.tenure }} yr</dd>
+    </dl>
+    <label style="font-weight:500;font-size:.85rem"><input type="checkbox" name="compare" value="{{ p.id }}"> Compare</label>
+    <div class="btn-row" style="margin-top:.5rem">
+      <a class="btn btn--sm btn--primary" href="{% url 'policy-detail' p.pk %}">Details</a>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+<button class="btn" type="submit" style="margin-top:1rem">Compare selected</button>
+{% include 'partials/_pagination.html' %}
+{% else %}
+<div class="card"><div class="empty"><div class="empty__icon">🔍</div><p>No policies match your filters.</p></div></div>
+{% endif %}
+</form>
+{% endblock %}

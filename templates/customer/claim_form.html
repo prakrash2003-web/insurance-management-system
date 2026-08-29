@@ -1,0 +1,21 @@
+{% extends 'customer/_base.html' %}
+{% block page_title %}Submit a claim{% endblock %}
+{% block content %}
+<h1>Submit a claim</h1>
+<div class="card" style="max-width:600px">
+  {% if form.fields.policy_record.queryset.exists %}
+  <form method="post" class="form">
+    {% csrf_token %}
+    {% include 'partials/_form.html' %}
+    <div class="btn-row">
+      <button class="btn btn--primary" type="submit">Submit claim</button>
+      <a class="btn" href="{% url 'claim-list' %}">Cancel</a>
+    </div>
+  </form>
+  {% else %}
+  <div class="empty"><div class="empty__icon">🧾</div>
+    <p>You need an approved policy before you can file a claim.</p>
+    <a class="btn" href="{% url 'history' %}">View applications</a></div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,30 @@
+{% extends 'customer/_base.html' %}
+{% load humanize app_extras %}
+{% block page_title %}Application{% endblock %}
+{% block content %}
+<p><a href="{% url 'history' %}">&larr; Back to applications</a></p>
+<div class="card">
+  <div class="card__header">
+    <h1 class="mb-0">{{ record.policy.policy_name }}</h1>
+    <span class="badge {{ record.status|badge_class }}">{{ record.status }}</span>
+  </div>
+  <dl class="definition">
+    <dt>Category</dt><dd>{{ record.policy.category.category_name }}</dd>
+    <dt>Sum assured</dt><dd>{{ record.policy.sum_assurance|intcomma }}</dd>
+    <dt>Annual premium</dt><dd>{{ record.policy.premium|intcomma }}</dd>
+    <dt>Tenure</dt><dd>{{ record.policy.tenure }} years</dd>
+    <dt>Applied on</dt><dd>{{ record.created_at|date:"F j, Y" }}</dd>
+    {% if record.start_date %}
+    <dt>Cover start</dt><dd>{{ record.start_date }}</dd>
+    <dt>Cover end</dt><dd>{{ record.end_date }}</dd>
+    <dt>Renewal</dt><dd><span class="badge {{ record.renewal_status|badge_class }}">{{ record.renewal_status.label }}</span></dd>
+    {% endif %}
+  </dl>
+  {% if record.status == 'Approved' %}
+    <div class="btn-row" style="margin-top:1rem">
+      <a class="btn" href="{% url 'claim-create' %}">Submit a claim</a>
+      <a class="btn" href="{% url 'renewals' %}">Manage renewal</a>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

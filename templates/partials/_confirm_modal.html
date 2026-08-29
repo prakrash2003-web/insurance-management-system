@@ -1,0 +1,11 @@
+{# Shared confirmation dialog, driven by static/js/app.js #}
+<dialog class="modal" id="confirm-modal">
+  <form method="dialog">
+    <h3>Please confirm</h3>
+    <p data-confirm-message class="text-muted">Are you sure?</p>
+    <div class="btn-row" style="justify-content:flex-end">
+      <button class="btn" value="cancel">Cancel</button>
+      <button class="btn btn--danger" value="confirm">Confirm</button>
+    </div>
+  </form>
+</dialog>

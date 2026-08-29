@@ -1,0 +1,29 @@
+{% extends 'customer/_base.html' %}
+{% load humanize app_extras %}
+{% block page_title %}My claims{% endblock %}
+{% block content %}
+<div class="card__header"><h1 class="mb-0">My claims</h1><a class="btn btn--primary" href="{% url 'claim-create' %}">Submit a claim</a></div>
+
+{% if page_obj.object_list %}
+<div class="table-wrap">
+  <table class="data">
+    <thead><tr><th>#</th><th>Policy</th><th>Amount</th><th>Filed</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+      {% for c in page_obj %}
+      <tr>
+        <td>{{ c.id }}</td>
+        <td>{{ c.policy_record.policy.policy_name }}</td>
+        <td>{{ c.claim_amount|intcomma }}</td>
+        <td>{{ c.created_at|date:"M j, Y" }}</td>
+        <td><span class="badge {{ c.status|badge_class }}">{{ c.status }}</span></td>
+        <td><a class="btn btn--sm" href="{% url 'claim-detail' c.pk %}">View</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% include 'partials/_pagination.html' %}
+{% else %}
+<div class="card"><div class="empty"><div class="empty__icon">🧾</div><p>No claims filed. You can claim against an approved policy.</p></div></div>
+{% endif %}
+{% endblock %}

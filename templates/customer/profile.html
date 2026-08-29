@@ -1,0 +1,18 @@
+{% extends 'customer/_base.html' %}
+{% block page_title %}Profile{% endblock %}
+{% block content %}
+<div class="card__header"><h1 class="mb-0">My profile</h1><a class="btn btn--primary" href="{% url 'customer-profile-edit' %}">Edit profile</a></div>
+<div class="card">
+  <div style="display:flex;gap:1.25rem;align-items:center;margin-bottom:1rem">
+    {% if customer.profile_pic %}<img class="avatar" src="{{ customer.profile_pic.url }}" alt="">{% else %}<div class="avatar" style="display:flex;align-items:center;justify-content:center;font-size:1.5rem">{{ customer.get_name|slice:':1' }}</div>{% endif %}
+    <div><strong style="font-size:1.1rem">{{ customer.get_name }}</strong><br><span class="text-muted">{{ user.email }}</span></div>
+  </div>
+  <dl class="definition">
+    <dt>Username</dt><dd>{{ user.username }}</dd>
+    <dt>Mobile</dt><dd>{{ customer.mobile }}</dd>
+    <dt>Address</dt><dd>{{ customer.address }}</dd>
+    <dt>Member since</dt><dd>{{ customer.created_at|date:"F j, Y" }}</dd>
+  </dl>
+  <p style="margin-top:1rem"><a href="{% url 'password_change' %}">Change password</a></p>
+</div>
+{% endblock %}

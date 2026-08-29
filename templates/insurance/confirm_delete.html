@@ -1,0 +1,16 @@
+{% extends 'insurance/_base.html' %}
+{% block page_title %}{{ title }}{% endblock %}
+{% block content %}
+<div class="card" style="max-width:480px">
+  <h1>{{ title }}</h1>
+  <p>You are about to permanently delete <strong>{{ object }}</strong>.
+     Related records will also be removed. This cannot be undone.</p>
+  <form method="post">
+    {% csrf_token %}
+    <div class="btn-row">
+      <button class="btn btn--danger" type="submit">Yes, delete</button>
+      <a class="btn" href="{% url cancel_url %}">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

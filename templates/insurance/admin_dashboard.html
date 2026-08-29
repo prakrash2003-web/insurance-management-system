@@ -1,176 +1,48 @@
-{% extends 'insurance/adminbase.html' %}
-{% load widget_tweaks %}
+{% extends 'insurance/_base.html' %}
+{% load humanize app_extras %}
+{% block page_title %}Dashboard{% endblock %}
 {% block content %}
+<h1>Overview</h1>
 
+<div class="stat-grid">
+  <div class="stat"><div class="stat__label">Customers</div><div class="stat__value"><a href="{% url 'admin-view-customer' %}">{{ total_user }}</a></div></div>
+  <div class="stat"><div class="stat__label">Policies</div><div class="stat__value"><a href="{% url 'admin-view-policy' %}">{{ total_policy }}</a></div></div>
+  <div class="stat"><div class="stat__label">Categories</div><div class="stat__value"><a href="{% url 'admin-view-category' %}">{{ total_category }}</a></div></div>
+  <div class="stat"><div class="stat__label">Applications</div><div class="stat__value"><a href="{% url 'admin-view-policy-holder' %}">{{ total_policy_holder }}</a></div></div>
+  <div class="stat"><div class="stat__label">Pending applications</div><div class="stat__value">{{ waiting_policy_holder }}</div></div>
+  <div class="stat"><div class="stat__label">Approved applications</div><div class="stat__value">{{ approved_policy_holder }}</div></div>
+  <div class="stat"><div class="stat__label">Claims</div><div class="stat__value"><a href="{% url 'admin-claims' %}">{{ total_claims }}</a></div></div>
+  <div class="stat"><div class="stat__label">Pending claims</div><div class="stat__value">{{ pending_claims }}</div></div>
+  <div class="stat"><div class="stat__label">Unanswered questions</div><div class="stat__value"><a href="{% url 'admin-question' %}?answered=0">{{ unanswered_question }}</a></div></div>
+  <div class="stat"><div class="stat__label">Total sum assured</div><div class="stat__value">{{ assured_sum|intcomma }}</div></div>
+</div>
 
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-  
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
-    <link href="http://netdna.bootstrapcdn.com/bootstrap/4.0.0-beta/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css">
-    <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css" rel="stylesheet">
-    <style type="text/css">
-      a:link {
-        text-decoration: none;
-      }
-  
-      .order-card {
-        color: rgb(255, 255, 255);
-      }
-  
-      .bg-c-blue {
-        background: #009688;
-      }
-  
-      .bg-c-green {
-        background:#4C51BF;
-      }
-  
-      .bg-c-yellow {
-        background: #F56565;
-      }
-  
-      .bg-c-pink {
-        background: #663a30;
-      }
-  
-  
-      .card {
-        
-        -webkit-box-shadow: 0 1px 2.94px 0.06px rgba(4, 26, 55, 0.16);
-        box-shadow: 0 1px 2.94px 0.06px rgba(4, 26, 55, 0.16);
-        /* border: 1px solid black; */
-        margin-bottom: 30px;
-        -webkit-transition: all 0.3s ease-in-out;
-        transition: all 0.3s ease-in-out;
-      }
-  
-      .card .card-block {
-        padding: 25px;
-      }
-  
-      .order-card i {
-        font-size: 26px;
-      }
-  
-      .f-left {
-        float: left;
-      }
-  
-      .f-right {
-        float: right;
-      }
-      header {
-      left: 0px;
-      right: 0px;
-    }
-    </style>
-  </head>
-
-
-  <div class="container">
-
-    
-    <div class="row">
-      <div class="col-md-4 col-xl-3">
-        <div class="card bg-c-blue order-card">
-          <div class="card-block">
-            <h6 class="m-b-20"> <a href="admin-view-customer" style="text-decoration: none;color:white;">Total Registered User</a> </h6>
-            <h2 class="text-right"><i  class="fas fa-users f-left"></i><span>{{total_user}}</span></h2>
-            
-          </div>
-        </div>
-      </div>
-  
-      <div class="col-md-4 col-xl-3">
-        <div class="card bg-c-blue order-card">
-          <div class="card-block">
-            <h6 class="m-b-20"><a href="admin-view-policy" style="text-decoration: none;color:white;">Listed Policies</a> </h6>
-            <h2 class="text-right"><i class="fab fa-product-hunt f-left"></i><span>{{total_policy}}</span></h2>
-            
-          </div>
-        </div>
-      </div>
-  
-      <div class="col-md-4 col-xl-3">
-        <div class="card bg-c-blue order-card">
-          <div class="card-block">
-            <h6 class="m-b-20"><a href="admin-view-category" style="text-decoration: none;color:white;">Listed Categories</a></h6>
-           <h2 class="text-right"><i class="fas fa-list-alt f-left"></i><span>{{total_category}}</span></h2>
-            
-          </div>
-        </div>
-      </div>
-  
-      <div class="col-md-4 col-xl-3">
-        <div class="card bg-c-blue order-card">
-          <div class="card-block">
-            <h6 class="m-b-20"><a href="admin-question" style="text-decoration: none;color:white;">Total Question</a></h6>
-            <h2 class="text-right"><i class="fas fa-question-circle f-left"></i><span>{{total_question}}</span></h2>
-            
-          </div>
-        </div>
-      </div>
-
-      
-    </div>
-
-    <br>
-    <div class="row">
-      <div class="col-md-4 col-xl-3">
-        <div class="card bg-c-blue order-card">
-          <div class="card-block">
-            <h6 class="m-b-20"> <a href="admin-view-policy-holder" style="text-decoration: none;color:white;">Applied Policy Holder</a> </h6>
-            <h2 class="text-right"><i class="fas fa-user-cog f-left"></i><span>{{total_policy_holder}}</span></h2>
-            
-          </div>
-        </div>
-      </div>
-  
-      <div class="col-md-4 col-xl-3">
-        <div class="card bg-c-blue order-card">
-          <div class="card-block">
-            <h6 class="m-b-20"><a href="admin-view-approved-policy-holder" style="text-decoration: none;color:white;">Approved Policy Holder</a> </h6>
-            <h2 class="text-right"><i class="fas fa-user-check f-left"></i><span>{{approved_policy_holder}}</span></h2>
-            
-          </div>
-        </div>
-      </div>
-  
-      <div class="col-md-4 col-xl-3">
-        <div class="card bg-c-blue order-card">
-          <div class="card-block">
-            <h6 class="m-b-20"><a href="admin-view-disapproved-policy-holder" style="text-decoration: none;color:white;">Disapproved Policy Holder</a></h6>
-           <h2 class="text-right"><i class="fas fa-user-times f-left"></i><span>{{disapproved_policy_holder}}</span></h2>
-            
-          </div>
-        </div>
-      </div>
-  
-      <div class="col-md-4 col-xl-3">
-        <div class="card bg-c-blue order-card">
-          <div class="card-block">
-            <h6 class="m-b-20"><a href="admin-view-waiting-policy-holder" style="text-decoration: none;color:white;">Pending Policy Holder</a></h6>
-            <h2 class="text-right"><i class="fas fa-user-clock f-left"></i><span>{{waiting_policy_holder}}</span></h2>
-            
-          </div>
-        </div>
-      </div>
-
-      
-    </div>
-
-  
-
+<div class="grid grid--2">
+  <div class="card">
+    <div class="card__header"><span class="card__title">Recent applications</span><a class="btn btn--sm" href="{% url 'admin-view-policy-holder' %}">All</a></div>
+    {% if recent_records %}
+    <div class="table-wrap"><table class="data">
+      <thead><tr><th>Customer</th><th>Policy</th><th>Status</th></tr></thead>
+      <tbody>{% for r in recent_records %}
+        <tr><td>{{ r.customer.get_name }}</td><td>{{ r.policy.policy_name }}</td>
+          <td><span class="badge {{ r.status|badge_class }}">{{ r.status }}</span></td></tr>
+      {% endfor %}</tbody>
+    </table></div>
+    {% else %}<div class="empty">No applications yet.</div>{% endif %}
   </div>
 
-
-<br><br><br><br><br><br>
-
-<script src="http://netdna.bootstrapcdn.com/bootstrap/4.0.0-beta/js/bootstrap.min.js"></script>
-
-
-{% endblock content %}
+  <div class="card">
+    <div class="card__header"><span class="card__title">Recent claims</span><a class="btn btn--sm" href="{% url 'admin-claims' %}">All</a></div>
+    {% if recent_claims %}
+    <div class="table-wrap"><table class="data">
+      <thead><tr><th>#</th><th>Customer</th><th>Amount</th><th>Status</th></tr></thead>
+      <tbody>{% for c in recent_claims %}
+        <tr><td><a href="{% url 'admin-claim-detail' c.pk %}">{{ c.id }}</a></td><td>{{ c.customer.get_name }}</td>
+          <td>{{ c.claim_amount|intcomma }}</td>
+          <td><span class="badge {{ c.status|badge_class }}">{{ c.status }}</span></td></tr>
+      {% endfor %}</tbody>
+    </table></div>
+    {% else %}<div class="empty">No claims yet.</div>{% endif %}
+  </div>
+</div>
+{% endblock %}

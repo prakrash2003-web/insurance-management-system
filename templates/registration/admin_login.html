@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block title %}Administrator login &middot; InsuranceMS{% endblock %}
+{% block content %}
+<div class="card" style="max-width:420px;margin:2rem auto">
+  <h2>Administrator login</h2>
+  {% if form.errors %}<ul class="errorlist"><li>Invalid username or password.</li></ul>{% endif %}
+  <form method="post" class="form">
+    {% csrf_token %}
+    {% include 'partials/_form.html' %}
+    <input type="hidden" name="next" value="{{ next }}">
+    <button class="btn btn--primary" type="submit">Log in</button>
+  </form>
+  <p class="text-muted" style="margin-top:1rem"><a href="{% url 'password_reset' %}">Forgot password?</a></p>
+</div>
+{% endblock %}

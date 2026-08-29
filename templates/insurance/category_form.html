@@ -1,0 +1,15 @@
+{% extends 'insurance/_base.html' %}
+{% block page_title %}{{ mode }} category{% endblock %}
+{% block content %}
+<h1>{{ mode }} category</h1>
+<div class="card" style="max-width:520px">
+  <form method="post" class="form">
+    {% csrf_token %}
+    {% include 'partials/_form.html' with form=categoryForm %}
+    <div class="btn-row">
+      <button class="btn btn--primary" type="submit">Save</button>
+      <a class="btn" href="{% url 'admin-view-category' %}">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

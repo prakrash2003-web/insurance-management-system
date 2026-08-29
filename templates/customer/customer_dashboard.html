@@ -1,126 +1,49 @@
-{% extends 'customer/customerbase.html' %}
-{% load widget_tweaks %}
+{% extends 'customer/_base.html' %}
+{% load app_extras %}
+{% block page_title %}Dashboard{% endblock %}
 {% block content %}
+<h1>Welcome, {{ customer.get_name }}</h1>
 
+<div class="stat-grid">
+  <div class="stat"><div class="stat__label">Available policies</div><div class="stat__value"><a href="{% url 'policy-list' %}">{{ available_policy }}</a></div></div>
+  <div class="stat"><div class="stat__label">My applications</div><div class="stat__value"><a href="{% url 'history' %}">{{ applied_policy }}</a></div></div>
+  <div class="stat"><div class="stat__label">Approved</div><div class="stat__value">{{ approved_policy }}</div></div>
+  <div class="stat"><div class="stat__label">Pending</div><div class="stat__value">{{ pending_policy }}</div></div>
+  <div class="stat"><div class="stat__label">Claims</div><div class="stat__value"><a href="{% url 'claim-list' %}">{{ total_claims }}</a></div></div>
+  <div class="stat"><div class="stat__label">Questions</div><div class="stat__value"><a href="{% url 'question-history' %}">{{ total_question }}</a></div></div>
+</div>
 
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-  
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
-    <link href="http://netdna.bootstrapcdn.com/bootstrap/4.0.0-beta/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css">
-    <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css" rel="stylesheet">
-    <style type="text/css">
-      a:link {
-        text-decoration: none;
-      }
-  
-      .order-card {
-        color: rgb(255, 255, 255);
-      }
-  
-      .bg-c-blue {
-        background: #506b78;
-      }
-  
-      .bg-c-green {
-        background:#4C51BF;
-      }
-  
-      .bg-c-yellow {
-        background: #F56565;
-      }
-  
-      .bg-c-pink {
-        background: #663a30;
-      }
-  
-  
-      .card {
-        
-        -webkit-box-shadow: 0 1px 2.94px 0.06px rgba(4, 26, 55, 0.16);
-        box-shadow: 0 1px 2.94px 0.06px rgba(4, 26, 55, 0.16);
-        /* border: 1px solid black; */
-        margin-bottom: 30px;
-        -webkit-transition: all 0.3s ease-in-out;
-        transition: all 0.3s ease-in-out;
-      }
-  
-      .card .card-block {
-        padding: 25px;
-      }
-  
-      .order-card i {
-        font-size: 26px;
-      }
-  
-      .f-left {
-        float: left;
-      }
-  
-      .f-right {
-        float: right;
-      }
-      header {
-      left: 0px;
-      right: 0px;
-    }
-    </style>
-  </head>
+{% if renewals_due %}
+<div class="card" style="border-color:var(--warning)">
+  <div class="card__title">Renewals needing attention</div>
+  <ul class="mb-0">
+    {% for r in renewals_due %}
+      <li>{{ r.policy.policy_name }} &mdash; <span class="badge {{ r.renewal_status|badge_class }}">{{ r.renewal_status.label }}</span>
+        <a href="{% url 'renewals' %}">manage</a></li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
 
-
-  <div class="container">
-    <div class="row">
-      <div class="col-md-4 col-xl-3">
-        <div class="card bg-c-blue order-card">
-          <div class="card-block">
-            <h6 class="m-b-20"> <a href="apply-policy" style="text-decoration: none;color:white;">Available Policy</a> </h6>
-            <h2 class="text-right"><i  class="fab fa-product-hunt f-left"></i><span>{{available_policy}}</span></h2>
-            
-          </div>
-        </div>
-      </div>
-  
-      <div class="col-md-4 col-xl-3">
-        <div class="card bg-c-blue order-card">
-          <div class="card-block">
-            <h6 class="m-b-20"><a href="history" style="text-decoration: none;color:white;">Applied Policy</a> </h6>
-            <h2 class="text-right"><i class="fab fa-product-hunt f-left"></i><span>{{applied_policy}}</span></h2>
-            
-          </div>
-        </div>
-      </div>
-  
-      <div class="col-md-4 col-xl-3">
-        <div class="card bg-c-blue order-card">
-          <div class="card-block">
-            <h6 class="m-b-20"><a href="/" style="text-decoration: none;color:white;">Policy Categories</a></h6>
-           <h2 class="text-right"><i class="fas fa-list-alt f-left"></i><span>{{total_category}}</span></h2>
-            
-          </div>
-        </div>
-      </div>
-  
-      <div class="col-md-4 col-xl-3">
-        <div class="card bg-c-blue order-card">
-          <div class="card-block">
-            <h6 class="m-b-20"><a href="question-history" style="text-decoration: none;color:white;">Total Question Asked</a></h6>
-            <h2 class="text-right"><i class="fas fa-question-circle f-left"></i><span>{{total_question}}</span></h2>
-            
-          </div>
-        </div>
-      </div>
-
-      
-    </div>
+<div class="card">
+  <div class="card__header"><span class="card__title">Recent applications</span><a class="btn btn--sm" href="{% url 'history' %}">View all</a></div>
+  {% if recent_records %}
+  <div class="table-wrap">
+    <table class="data">
+      <thead><tr><th>Policy</th><th>Applied</th><th>Status</th></tr></thead>
+      <tbody>
+        {% for r in recent_records %}
+        <tr>
+          <td><a href="{% url 'application-detail' r.pk %}">{{ r.policy.policy_name }}</a></td>
+          <td>{{ r.created_at|date:"M j, Y" }}</td>
+          <td><span class="badge {{ r.status|badge_class }}">{{ r.status }}</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
   </div>
-
-
-<br><br><br><br><br><br><br><br><br><br>
-
-<script src="http://netdna.bootstrapcdn.com/bootstrap/4.0.0-beta/js/bootstrap.min.js"></script>
-
-
-{% endblock content %}
+  {% else %}
+  <div class="empty"><div class="empty__icon">📄</div><p>No applications yet. <a href="{% url 'policy-list' %}">Browse policies</a>.</p></div>
+  {% endif %}
+</div>
+{% endblock %}

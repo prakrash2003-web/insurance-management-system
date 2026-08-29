@@ -1,0 +1,43 @@
+{% extends 'insurance/_base.html' %}
+{% load humanize app_extras %}
+{% block page_title %}Claims{% endblock %}
+{% block content %}
+<h1>Claims</h1>
+
+<div class="card">
+  <form method="get" class="form-inline">
+    <div class="field"><label>Search</label><input type="search" name="q" value="{{ q }}" placeholder="Customer or policy"></div>
+    <div class="field"><label>Status</label>
+      <select name="status">
+        <option value="">All</option>
+        {% for value, label in statuses %}<option value="{{ value }}" {% if selected_status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+      </select>
+    </div>
+    <button class="btn btn--primary" type="submit">Filter</button>
+  </form>
+</div>
+
+{% if page_obj.object_list %}
+<div class="table-wrap">
+  <table class="data">
+    <thead><tr><th>#</th><th>Customer</th><th>Policy</th><th>Amount</th><th>Filed</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+      {% for c in page_obj %}
+      <tr>
+        <td>{{ c.id }}</td>
+        <td>{{ c.customer.get_name }}</td>
+        <td>{{ c.policy_record.policy.policy_name }}</td>
+        <td>{{ c.claim_amount|intcomma }}</td>
+        <td>{{ c.created_at|date:"M j, Y" }}</td>
+        <td><span class="badge {{ c.status|badge_class }}">{{ c.status }}</span></td>
+        <td><a class="btn btn--sm btn--primary" href="{% url 'admin-claim-detail' c.pk %}">Review</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% include 'partials/_pagination.html' %}
+{% else %}
+<div class="card"><div class="empty"><div class="empty__icon">🧾</div><p>No claims found.</p></div></div>
+{% endif %}
+{% endblock %}

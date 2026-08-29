@@ -1,0 +1,15 @@
+{% with n=request.resolver_match.url_name %}
+<a href="{% url 'admin-dashboard' %}" class="{% if n == 'admin-dashboard' %}is-active{% endif %}">Dashboard</a>
+<div class="sidebar__section">Catalogue</div>
+<a href="{% url 'admin-view-category' %}" class="{% if 'category' in n %}is-active{% endif %}">Categories</a>
+<a href="{% url 'admin-view-policy' %}" class="{% if 'policy' in n and 'holder' not in n %}is-active{% endif %}">Policies</a>
+<div class="sidebar__section">Operations</div>
+<a href="{% url 'admin-view-policy-holder' %}" class="{% if 'policy-holder' in n %}is-active{% endif %}">Applications</a>
+<a href="{% url 'admin-claims' %}" class="{% if 'claim' in n %}is-active{% endif %}">Claims</a>
+<a href="{% url 'admin-question' %}" class="{% if 'question' in n %}is-active{% endif %}">Questions</a>
+<div class="sidebar__section">People</div>
+<a href="{% url 'admin-view-customer' %}" class="{% if 'customer' in n %}is-active{% endif %}">Customers</a>
+<div class="sidebar__section">System</div>
+<a href="/admin/">Django admin</a>
+<a href="{% url 'password_change' %}">Change password</a>
+{% endwith %}

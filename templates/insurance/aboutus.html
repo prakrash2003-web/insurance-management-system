@@ -1,48 +1,15 @@
-<!DOCTYPE html>
-{% load static %}
-<html lang="en" dir="ltr">
-
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-
-  <style media="screen">
-    .jumbotron {
-      margin-top: 0px;
-      margin-bottom: 0px;
-    }
-
-    .jumbotron h1 {
-      text-align: center;
-    }
-
-    .alert {
-      margin: 0px;
-    }
-  </style>
-
-  <title></title>
-</head>
-
-<body>
-
-  {% include "insurance/navbar.html" %}
-  <br><br>
-  <center>
-    <h3 class='alert alert-success' style="margin-bottom:0px;">About Us !</h3>
-  </center>
-  <div class="jumbotron text-center" style="margin-bottom: 0px;margin-top: 0px;">
-    
-    <p class="lead">“Every month that you send a check to the life insurance company, you're making a bet with them. Don't worry, one day you'll win.”</p>
-    <hr class="my-4">
-    <p>Explore our Website.</p>
-    <p class="lead">
-      <a class="btn btn-primary btn-lg" href="/" role="button">HOME</a>
-    </p>
-    <br><br><br><br>
-  </div>
-
-  {% include "insurance/footer.html" %}
-</body>
-
-</html>
+{% extends 'base.html' %}
+{% block title %}About &middot; InsuranceMS{% endblock %}
+{% block content %}
+<h1>About this project</h1>
+<div class="card">
+  <p>The Insurance Management System is a Django demo application that models a small
+  insurance provider. Customers can browse and compare policies, receive a
+  transparent rule-based recommendation, apply for cover, submit claims and renew
+  approved policies. Administrators manage the policy catalogue and review
+  applications, questions and claims.</p>
+  <p class="mb-0">It is built with Django 4.2, uses role-based access control
+  (customer vs. staff), environment-based configuration and an automated test
+  suite.</p>
+</div>
+{% endblock %}
