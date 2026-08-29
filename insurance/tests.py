@@ -1,7 +1,7 @@
 from decimal import Decimal
 
 from django.contrib.auth.models import Group, User
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from customer.models import Customer
@@ -287,3 +287,22 @@ class RenewalTests(BaseData):
         self.assertRedirects(r, reverse("renewals"))
         record.refresh_from_db()
         self.assertGreater(record.end_date, old_end)
+
+
+class ErrorPageTests(BaseData):
+    def test_custom_403_page(self):
+        self.client.force_login(self.cust_user)
+        r = self.client.get(reverse("admin-dashboard"))
+        self.assertEqual(r.status_code, 403)
+        self.assertContains(r, "Access denied", status_code=403)
+
+    @override_settings(DEBUG=False, ALLOWED_HOSTS=["testserver"])
+    def test_custom_404_page(self):
+        r = self.client.get("/no-such-page-here")
+        self.assertEqual(r.status_code, 404)
+        self.assertContains(r, "Page not found", status_code=404)
+
+    def test_favicon_redirects_to_static(self):
+        r = self.client.get("/favicon.ico")
+        self.assertEqual(r.status_code, 301)
+        self.assertTrue(r.url.endswith("/static/favicon.svg"))

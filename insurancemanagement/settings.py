@@ -35,7 +35,13 @@ SECRET_KEY = env(
     default=("django-insecure-dev-only-key-change-me" if DEBUG else ""),
 )
 if not SECRET_KEY:
-    raise RuntimeError("DJANGO_SECRET_KEY environment variable is required when DEBUG is False.")
+    raise RuntimeError(
+        "DJANGO_SECRET_KEY is required when DEBUG is False.\n"
+        "For local development: copy .env.example to .env and set DJANGO_DEBUG=True "
+        "plus a generated DJANGO_SECRET_KEY\n"
+        '  python -c "from django.core.management.utils import get_random_secret_key as k; print(k())"\n'
+        "For production: set the DJANGO_SECRET_KEY environment variable."
+    )
 
 ALLOWED_HOSTS = env("DJANGO_ALLOWED_HOSTS")
 CSRF_TRUSTED_ORIGINS = env("DJANGO_CSRF_TRUSTED_ORIGINS")
@@ -55,6 +61,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -120,6 +127,14 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
+
+# WhiteNoise serves collected static files (with compression) when DEBUG is
+# False, so the app works without a separate web server. No hashed-manifest
+# storage, so `{% static %}` never needs `collectstatic` to have run first.
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedStaticFilesStorage"},
+}
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 

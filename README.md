@@ -23,9 +23,9 @@ portfolio-ready application with:
   protected, destructive actions use confirmation dialogs, production security
   settings (HSTS, secure cookies, SSL redirect) switch on automatically when
   `DEBUG=False`.
-* **A real automated test suite** (`python manage.py test`).
+* **A real automated test suite** – 32 tests (`python manage.py test`).
 * **A modern, responsive UI** built with a small hand-written CSS design system
-  (no external CDNs).
+  (no external CDNs) and custom `403` / `404` / `500` pages.
 
 ## Features
 
@@ -67,14 +67,19 @@ portfolio-ready application with:
 
 | Area            | Choice                                |
 |-----------------|---------------------------------------|
-| Language        | Python 3.8+                           |
+| Language        | Python 3.8 – 3.12 (developed on 3.8)  |
 | Framework       | Django 4.2 LTS                        |
 | Config          | `django-environ` (`.env`)             |
 | Forms           | `django-widget-tweaks`                |
+| Static files    | WhiteNoise (compressed serving when `DEBUG=False`) |
 | Images          | Pillow                               |
 | Database        | SQLite by default; any `DATABASE_URL` |
 | Frontend        | Server-rendered templates + one CSS file + progressive-enhancement JS |
-| Tests           | Django test framework                 |
+| Tests           | Django test framework (32 tests)      |
+
+> **Python version.** The project targets Django 4.2 LTS, which supports
+> Python 3.8–3.12. The bundled virtualenv uses Python 3.8; any version in that
+> range works. Pillow is pinned to 10.4.0 (the last series supporting 3.8).
 
 ## Architecture
 
@@ -144,6 +149,24 @@ User 1───* Notification
 * `/afterlogin` routes each user to the correct dashboard.
 * Password change and reset use Django's built-in views.
 
+## Security features
+
+* Secrets and environment config never in source (`.env`, git-ignored); the app
+  refuses to start with `DEBUG=False` and no `SECRET_KEY`.
+* CSRF protection on every form; all destructive / state-changing actions
+  (delete, approve, reject, renew, mark-read) are `POST`-only.
+* Role separation enforced by decorators, not just template hiding — customers
+  get `403` on staff URLs, staff get `403` on customer URLs.
+* Object-level authorization: customer views fetch records scoped to
+  `request.user` via `get_object_or_404`, so one customer cannot read or modify
+  another's application, claim or renewal (no IDOR).
+* Django password validators enforced on sign-up; admin editing a customer
+  cannot touch the password hash.
+* When `DEBUG=False`: `SECURE_SSL_REDIRECT`, HSTS (30 days, subdomains, preload),
+  `Secure` + `HttpOnly` session/CSRF cookies, `X-Frame-Options: DENY`,
+  `X-Content-Type-Options: nosniff`, `Referrer-Policy: same-origin`.
+* `python manage.py check --deploy` passes (with a real 50-char key).
+
 ## Screenshots
 
 Run the app and sign in with the demo accounts to see:
@@ -162,18 +185,27 @@ _(Add PNGs under `docs/` and link them here if you want them in the repo.)_
 git clone <repo-url>
 cd insurance_management
 
+# 1. Virtual environment
 python -m venv venv
-source venv/bin/activate        # Windows: venv\Scripts\activate
+source venv/bin/activate            # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 
-cp .env.example .env
-python -c "from django.core.management.utils import get_random_secret_key as k; print('DJANGO_SECRET_KEY=' + k())" >> .env
-# then edit .env: set DJANGO_DEBUG=True for local work
+# 2. Environment file (never committed)
+cp .env.example .env                # Windows: copy .env.example .env
 
+# 3. Generate a development secret key and paste it into .env as DJANGO_SECRET_KEY
+python -c "from django.core.management.utils import get_random_secret_key as k; print(k())"
+#   .env already ships with DJANGO_DEBUG=True and safe local defaults.
+
+# 4. Database + optional demo data
 python manage.py migrate
-python manage.py seed_demo          # optional demo data + accounts
+python manage.py seed_demo          # optional: demo policies + accounts
 python manage.py createsuperuser    # or use the seeded 'admin' account
 ```
+
+If `python manage.py check` reports
+`DJANGO_SECRET_KEY is required when DEBUG is False`, step 2/3 was skipped —
+create `.env` and set a key.
 
 ## Environment variables
 
@@ -209,10 +241,10 @@ Demo accounts (after `seed_demo`):
 python manage.py test
 ```
 
-The suite covers sign-up, login, role permissions, unauthorized access,
-policy creation, applications, approval/rejection, claims, the admin
-customer-update password fix, renewals, the premium calculator and the
-recommendation engine.
+The 32 tests cover sign-up, login, role permissions, unauthorized access and
+IDOR, policy creation, applications, approval/rejection, claims, the admin
+customer-update password fix, renewals, the premium calculator, the
+recommendation engine and the custom 403/404 error pages.
 
 Other checks:
 
@@ -220,6 +252,17 @@ Other checks:
 python manage.py check --deploy      # security review (run with DEBUG=False)
 python manage.py collectstatic       # gather static files for deployment
 ```
+
+## Limitations
+
+* Renewal reminders and question/claim updates are **in-app notifications only** –
+  no outbound email or scheduled job sends them yet.
+* No payment/premium collection – applications and claims are tracked, not billed.
+* Single SQLite database by default; no caching layer.
+* `Claim` and `Notification` live in the `insurance` app for now rather than a
+  dedicated app.
+* The recommendation engine is deliberately rule-based, not machine learning.
+* No file uploads for claims/KYC; profile picture is the only upload.
 
 ## Future improvements
 
