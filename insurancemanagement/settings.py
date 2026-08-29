@@ -92,12 +92,11 @@ TEMPLATES = [
 WSGI_APPLICATION = "insurancemanagement.wsgi.application"
 
 # --- Database --------------------------------------------------------------
-DATABASES = {
-    "default": env.db(
-        "DATABASE_URL",
-        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
-    )
-}
+# An empty/blank DATABASE_URL (e.g. a `.env` copied verbatim from the example)
+# falls back to local SQLite rather than producing an invalid config.
+_database_url = env("DATABASE_URL", default="").strip()
+_sqlite_url = f"sqlite:///{BASE_DIR / 'db.sqlite3'}"
+DATABASES = {"default": environ.Env.db_url_config(_database_url or _sqlite_url)}
 
 # --- Auth -----------------------------------------------------------------
 AUTH_PASSWORD_VALIDATORS = [
