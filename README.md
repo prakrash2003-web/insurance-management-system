@@ -242,14 +242,15 @@ The parts most worth looking at in a review:
 | Images | Pillow |
 | Database | SQLite by default; PostgreSQL in production via `DATABASE_URL` (`psycopg2`) |
 | Prod server | Gunicorn |
-| Hosting | Railway (`railway.json`, `runtime.txt`) |
+| Hosting | Railway (`railway.json`, `.python-version`) |
 | Frontend | Server-rendered Django templates + one hand-written CSS file + vanilla JS |
 | Tests | Django test framework (32 tests) |
 
 > **Python version.** Django 4.2 LTS supports Python 3.8–3.12; any version in
 > that range works. The bundled virtualenv uses 3.8, so Pillow is pinned to
-> 10.4.0 (the last series supporting 3.8). Railway deploys build on
-> **Python 3.12** (`runtime.txt`); `psycopg2-binary` is skipped on Windows.
+> 10.4.0 (the last series supporting 3.8). Railway builds on the latest
+> **Python 3.12.x** — `.python-version` pins the minor series and lets the
+> builder pick the newest patch. `psycopg2-binary` is skipped on Windows.
 
 ---
 
@@ -430,7 +431,7 @@ PostgreSQL database. Nothing about the local SQLite workflow changes.
 | File | Purpose |
 |---|---|
 | `requirements.txt` | adds `gunicorn` (WSGI server) and `psycopg2-binary` (Postgres driver, Linux only) |
-| `runtime.txt` | pins the build to `python-3.12.7` |
+| `.python-version` | pins the build to Python `3.12` (latest patch, chosen by the builder) |
 | `railway.json` | start command (migrate + Gunicorn) and restart policy |
 | `settings.py` | already env-driven; auto-trusts `RAILWAY_PUBLIC_DOMAIN`; WhiteNoise for static |
 
