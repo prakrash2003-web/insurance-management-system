@@ -19,8 +19,6 @@ warnings.filterwarnings("ignore", message="No directory at", category=UserWarnin
 # --- Environment -------------------------------------------------------------
 env = environ.Env(
     DJANGO_DEBUG=(bool, False),
-    DJANGO_ALLOWED_HOSTS=(list, ["127.0.0.1", "localhost"]),
-    DJANGO_CSRF_TRUSTED_ORIGINS=(list, []),
     DJANGO_SECURE_SSL_REDIRECT=(bool, False),
     CONTACT_RECEIVING_EMAILS=(list, []),
 )
@@ -48,16 +46,39 @@ if not SECRET_KEY:
         "For production: set the DJANGO_SECRET_KEY environment variable."
     )
 
-ALLOWED_HOSTS = list(env("DJANGO_ALLOWED_HOSTS"))
-CSRF_TRUSTED_ORIGINS = list(env("DJANGO_CSRF_TRUSTED_ORIGINS"))
 
-# Railway sets RAILWAY_PUBLIC_DOMAIN once a public domain is generated. Trust it
-# automatically so a deploy works without also copying the domain into
-# DJANGO_ALLOWED_HOSTS by hand.
-_railway_domain = env("RAILWAY_PUBLIC_DOMAIN", default="")
-if _railway_domain:
-    ALLOWED_HOSTS.append(_railway_domain)
-    CSRF_TRUSTED_ORIGINS.append(f"https://{_railway_domain}")
+def _hostlist(value):
+    """Parse a comma-separated env value into clean host entries.
+
+    Tolerates surrounding whitespace, blank items, and unresolved ``${...}``
+    placeholders (an un-substituted reference means "not set").
+    """
+    return [p.strip() for p in value.split(",") if p.strip() and "${" not in p]
+
+
+ALLOWED_HOSTS = _hostlist(env("DJANGO_ALLOWED_HOSTS", default="")) or ["127.0.0.1", "localhost"]
+CSRF_TRUSTED_ORIGINS = _hostlist(env("DJANGO_CSRF_TRUSTED_ORIGINS", default=""))
+
+# Railway injects RAILWAY_PUBLIC_DOMAIN once the service has a generated domain.
+ALLOWED_HOSTS += _hostlist(env("RAILWAY_PUBLIC_DOMAIN", default=""))
+
+# Running on Railway with no usable public host configured (variable missing,
+# empty, or still an unresolved reference): fall back to Railway's own
+# generated-domain namespace. This is NOT "*": Railway routes every
+# ``*.up.railway.app`` host to its own service, so it cannot be aimed here.
+_on_railway = bool(env("RAILWAY_ENVIRONMENT_NAME", default=""))
+_LOCAL_HOSTS = {"127.0.0.1", "localhost", "0.0.0.0"}
+if _on_railway and not any(h not in _LOCAL_HOSTS for h in ALLOWED_HOSTS):
+    ALLOWED_HOSTS += [".up.railway.app", ".railway.app"]
+
+# Trust each configured domain for HTTPS form POSTs (CSRF). Railway terminates
+# TLS at its edge and forwards over HTTP, so Django needs the origin listed.
+for _host in ALLOWED_HOSTS:
+    if _host in _LOCAL_HOSTS:
+        continue
+    _origin = "https://" + (f"*{_host}" if _host.startswith(".") else _host)
+    if _origin not in CSRF_TRUSTED_ORIGINS:
+        CSRF_TRUSTED_ORIGINS.append(_origin)
 
 INSTALLED_APPS = [
     "django.contrib.admin",

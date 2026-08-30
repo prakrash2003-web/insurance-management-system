@@ -376,14 +376,15 @@ Everything is read from `.env` (see `.env.example` for the annotated list):
 |---|---|---|
 | `DJANGO_SECRET_KEY` | Cryptographic key. **Required when `DEBUG=False`.** | insecure dev fallback only when `DEBUG=True` |
 | `DJANGO_DEBUG` | Debug mode | `False` |
-| `DJANGO_ALLOWED_HOSTS` | Comma-separated hostnames | `127.0.0.1,localhost` |
-| `DJANGO_CSRF_TRUSTED_ORIGINS` | Comma-separated origins (with scheme) | empty |
+| `DJANGO_ALLOWED_HOSTS` | Comma-separated hostnames (whitespace/blank-tolerant) | `127.0.0.1,localhost` |
+| `DJANGO_CSRF_TRUSTED_ORIGINS` | Extra origins (with scheme); each allowed host is trusted automatically | derived from hosts |
 | `DATABASE_URL` | DB connection URL (`postgres://…`); blank ⇒ local SQLite | SQLite |
 | `DJANGO_DB_CONN_MAX_AGE` | Persistent DB connection lifetime, seconds | `0` |
 | `EMAIL_BACKEND` | Email backend | console (prints to stdout) |
 | `DEFAULT_FROM_EMAIL` / `CONTACT_RECEIVING_EMAILS` | Contact form / reset addressing | — |
 | `DJANGO_SECURE_SSL_REDIRECT` | Force HTTPS (production only) | `True` when `DEBUG=False` |
-| `RAILWAY_PUBLIC_DOMAIN` | Injected by Railway; auto-trusted for hosts + CSRF | — |
+| `RAILWAY_PUBLIC_DOMAIN` | Injected by Railway when present; auto-trusted for hosts + CSRF | — |
+| `RAILWAY_ENVIRONMENT_NAME` | Injected by Railway; triggers the `*.up.railway.app` host fallback | — |
 
 ## Running locally
 
@@ -433,7 +434,7 @@ PostgreSQL database. Nothing about the local SQLite workflow changes.
 | `requirements.txt` | adds `gunicorn` (WSGI server) and `psycopg2-binary` (Postgres driver, Linux only) |
 | `.python-version` | Python `3.12` for the build |
 | `railway.json` | builder (**Nixpacks**), build command, start command (migrate + Gunicorn), restart policy |
-| `settings.py` | already env-driven; auto-trusts `RAILWAY_PUBLIC_DOMAIN`; WhiteNoise for static |
+| `settings.py` | env-driven; tolerant host parsing; auto-trusts `RAILWAY_PUBLIC_DOMAIN` and (as a fallback) `*.up.railway.app`; auto-derives CSRF origins; WhiteNoise for static |
 
 > **Builder note.** `railway.json` sets `"builder": "NIXPACKS"`. Railway's newer
 > default builder (Railpack) provisions Python with `mise`, which rejects older
@@ -454,16 +455,22 @@ PostgreSQL database. Nothing about the local SQLite workflow changes.
    |---|---|
    | `DJANGO_SECRET_KEY` | a fresh 50-char key — `python -c "from django.core.management.utils import get_random_secret_key as k; print(k())"` |
    | `DJANGO_DEBUG` | `False` |
-   | `DJANGO_ALLOWED_HOSTS` | `${{RAILWAY_PUBLIC_DOMAIN}}` (or your custom domain) |
-   | `DJANGO_CSRF_TRUSTED_ORIGINS` | `https://${{RAILWAY_PUBLIC_DOMAIN}}` |
+   | `DJANGO_ALLOWED_HOSTS` | the **exact** generated domain, e.g. `insurance-management-system-production.up.railway.app` (hostname only; add custom domains comma-separated) |
    | `DJANGO_DB_CONN_MAX_AGE` | `600` |
    | `DATABASE_URL` | `${{Postgres.DATABASE_URL}}` |
 
+   `DJANGO_CSRF_TRUSTED_ORIGINS` is **optional** — `settings.py` derives the
+   `https://` origin for every host in `DJANGO_ALLOWED_HOSTS` automatically.
    `DEFAULT_FROM_EMAIL` / `EMAIL_*` are optional (email defaults to the console
    backend). Do **not** set `PORT` — Railway provides it.
+
+   > Prefer the literal hostname over `${{RAILWAY_PUBLIC_DOMAIN}}`: if the
+   > reference is set before the domain exists it resolves to empty. If you do
+   > leave `DJANGO_ALLOWED_HOSTS` unset, `settings.py` falls back to trusting
+   > `*.up.railway.app` (scoped to Railway, not `*`) so the site still loads.
 4. **Generate the public domain.** Web service → *Settings* → *Networking* →
-   *Generate Domain*. Railway now sets `RAILWAY_PUBLIC_DOMAIN`, which the app
-   trusts automatically. Redeploy if the first deploy happened before this.
+   *Generate Domain*. Copy that hostname into `DJANGO_ALLOWED_HOSTS` (step 3),
+   then redeploy.
 5. **Build & release run automatically (from `railway.json`):**
    * Build: `pip install -r requirements.txt && python manage.py collectstatic --noinput`.
    * Start: `python manage.py migrate --noinput` then Gunicorn on `$PORT`.
