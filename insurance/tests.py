@@ -1,7 +1,11 @@
+import os
+import subprocess
+import sys
 from decimal import Decimal
 from io import StringIO
 from unittest import mock
 
+from django.conf import settings
 from django.contrib.auth.models import Group, User
 from django.core.management import call_command
 from django.test import TestCase, override_settings
@@ -396,3 +400,48 @@ class CheckSuperusersCommandTests(TestCase):
         out = StringIO()
         call_command("check_superusers", stdout=out)
         self.assertIn("No superusers found", out.getvalue())
+
+
+class CheckHostsCommandTests(TestCase):
+    def test_prints_resolved_config_without_secrets(self):
+        out = StringIO()
+        call_command("check_hosts", stdout=out)
+        text = out.getvalue()
+        self.assertIn("ALLOWED_HOSTS", text)
+        self.assertIn("CSRF_TRUSTED_ORIGINS", text)
+        self.assertIn("SECURE_PROXY_SSL_HEADER", text)
+        self.assertNotIn("SECRET_KEY", text)
+        self.assertNotIn("DATABASE_URL", text)
+
+
+class RailwayHostResolutionTests(TestCase):
+    """settings.py resolves ALLOWED_HOSTS at import time, so exercise it in a
+    fresh subprocess with a simulated Railway environment."""
+
+    def _allowed_hosts_line(self, extra_env):
+        env = {**os.environ, "DJANGO_DEBUG": "False",
+               "DJANGO_SECRET_KEY": "t" * 50,
+               "DATABASE_URL": "sqlite:///:memory:"}
+        env.pop("RAILWAY_ENVIRONMENT_NAME", None)
+        env.update(extra_env)
+        proc = subprocess.run(
+            [sys.executable, "manage.py", "check_hosts"],
+            capture_output=True, text=True, env=env, cwd=str(settings.BASE_DIR),
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        for line in proc.stdout.splitlines():
+            if line.strip().startswith("ALLOWED_HOSTS"):
+                return line
+        self.fail("ALLOWED_HOSTS not found in output")
+
+    def test_railway_domains_always_trusted_even_with_stale_explicit_host(self):
+        line = self._allowed_hosts_line({
+            "RAILWAY_ENVIRONMENT_NAME": "production",
+            "DJANGO_ALLOWED_HOSTS": "a-stale-old-domain.up.railway.app",
+        })
+        self.assertIn("'.up.railway.app'", line)                 # unconditional
+        self.assertIn("'a-stale-old-domain.up.railway.app'", line)  # explicit kept
+
+    def test_railway_suffix_not_added_off_railway(self):
+        line = self._allowed_hosts_line({"DJANGO_ALLOWED_HOSTS": "127.0.0.1,localhost"})
+        self.assertNotIn("railway", line)

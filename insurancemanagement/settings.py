@@ -59,22 +59,26 @@ def _hostlist(value):
 ALLOWED_HOSTS = _hostlist(env("DJANGO_ALLOWED_HOSTS", default="")) or ["127.0.0.1", "localhost"]
 CSRF_TRUSTED_ORIGINS = _hostlist(env("DJANGO_CSRF_TRUSTED_ORIGINS", default=""))
 
-# Railway injects RAILWAY_PUBLIC_DOMAIN once the service has a generated domain.
+# Explicit per-domain values (a custom domain, or the exact generated one).
 ALLOWED_HOSTS += _hostlist(env("RAILWAY_PUBLIC_DOMAIN", default=""))
 
-# Running on Railway with no usable public host configured (variable missing,
-# empty, or still an unresolved reference): fall back to Railway's own
-# generated-domain namespace. This is NOT "*": Railway routes every
-# ``*.up.railway.app`` host to its own service, so it cannot be aimed here.
+# On Railway, always trust Railway's own domain namespaces - regardless of
+# whatever DJANGO_ALLOWED_HOSTS / RAILWAY_PUBLIC_DOMAIN happen to hold. This
+# keeps the site reachable when the generated domain changes, when
+# RAILWAY_PUBLIC_DOMAIN is not injected, or when a stale value was configured.
+# It is NOT "*": Railway's router only sends a given *.railway.app host to the
+# service that owns it, so it cannot be pointed at this app.
 _on_railway = bool(env("RAILWAY_ENVIRONMENT_NAME", default=""))
 _LOCAL_HOSTS = {"127.0.0.1", "localhost", "0.0.0.0"}
-if _on_railway and not any(h not in _LOCAL_HOSTS for h in ALLOWED_HOSTS):
-    ALLOWED_HOSTS += [".up.railway.app", ".railway.app"]
+if _on_railway:
+    for _suffix in (".up.railway.app", ".railway.app", ".railway.internal"):
+        if _suffix not in ALLOWED_HOSTS:
+            ALLOWED_HOSTS.append(_suffix)
 
-# Trust each configured domain for HTTPS form POSTs (CSRF). Railway terminates
-# TLS at its edge and forwards over HTTP, so Django needs the origin listed.
+# Trust each configured public domain for HTTPS form POSTs (CSRF). Railway
+# terminates TLS at its edge and forwards over HTTP, so Django needs the origin.
 for _host in ALLOWED_HOSTS:
-    if _host in _LOCAL_HOSTS:
+    if _host in _LOCAL_HOSTS or _host.endswith(".railway.internal"):
         continue
     _origin = "https://" + (f"*{_host}" if _host.startswith(".") else _host)
     if _origin not in CSRF_TRUSTED_ORIGINS:

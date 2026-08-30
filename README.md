@@ -386,7 +386,7 @@ Everything is read from `.env` (see `.env.example` for the annotated list):
 | `DJANGO_SECURE_SSL_REDIRECT` | Force HTTPS (production only) | `True` when `DEBUG=False` |
 | `DJANGO_SUPERUSER_USERNAME` / `_EMAIL` / `_PASSWORD` | One-off: read by `init_superuser` to create the first admin. Remove the password var afterwards. | — |
 | `RAILWAY_PUBLIC_DOMAIN` | Injected by Railway when present; auto-trusted for hosts + CSRF | — |
-| `RAILWAY_ENVIRONMENT_NAME` | Injected by Railway; triggers the `*.up.railway.app` host fallback | — |
+| `RAILWAY_ENVIRONMENT_NAME` | Injected by Railway; makes the app trust the `*.railway.app` domain namespace | — |
 
 ## Running locally
 
@@ -436,7 +436,7 @@ PostgreSQL database. Nothing about the local SQLite workflow changes.
 | `requirements.txt` | adds `gunicorn` (WSGI server) and `psycopg2-binary` (Postgres driver, Linux only) |
 | `.python-version` | Python `3.12` for the build |
 | `railway.json` | builder (**Nixpacks**), build command, start command (migrate + Gunicorn), restart policy |
-| `settings.py` | env-driven; tolerant host parsing; auto-trusts `RAILWAY_PUBLIC_DOMAIN` and (as a fallback) `*.up.railway.app`; auto-derives CSRF origins; WhiteNoise for static |
+| `settings.py` | env-driven; tolerant host parsing; on Railway always trusts `*.up.railway.app` / `*.railway.app` (survives a domain change); auto-derives CSRF origins; WhiteNoise for static |
 
 > **Builder note.** `railway.json` sets `"builder": "NIXPACKS"`. Railway's newer
 > default builder (Railpack) provisions Python with `mise`, which rejects older
@@ -457,22 +457,19 @@ PostgreSQL database. Nothing about the local SQLite workflow changes.
    |---|---|
    | `DJANGO_SECRET_KEY` | a fresh 50-char key — `python -c "from django.core.management.utils import get_random_secret_key as k; print(k())"` |
    | `DJANGO_DEBUG` | `False` |
-   | `DJANGO_ALLOWED_HOSTS` | the **exact** generated domain, e.g. `insurance-management-system-production.up.railway.app` (hostname only; add custom domains comma-separated) |
    | `DJANGO_DB_CONN_MAX_AGE` | `600` |
    | `DATABASE_URL` | `${{Postgres.DATABASE_URL}}` |
 
-   `DJANGO_CSRF_TRUSTED_ORIGINS` is **optional** — `settings.py` derives the
-   `https://` origin for every host in `DJANGO_ALLOWED_HOSTS` automatically.
-   `DEFAULT_FROM_EMAIL` / `EMAIL_*` are optional (email defaults to the console
-   backend). Do **not** set `PORT` — Railway provides it.
-
-   > Prefer the literal hostname over `${{RAILWAY_PUBLIC_DOMAIN}}`: if the
-   > reference is set before the domain exists it resolves to empty. If you do
-   > leave `DJANGO_ALLOWED_HOSTS` unset, `settings.py` falls back to trusting
-   > `*.up.railway.app` (scoped to Railway, not `*`) so the site still loads.
+   `DJANGO_ALLOWED_HOSTS` is **optional on Railway** — the app already trusts the
+   `*.up.railway.app` / `*.railway.app` namespace when `RAILWAY_ENVIRONMENT_NAME`
+   is present (scoped to Railway's router, **not** `*`), so it keeps working
+   even if the generated domain changes. Set `DJANGO_ALLOWED_HOSTS` only to add a
+   **custom domain** (hostname only, comma-separated). `DJANGO_CSRF_TRUSTED_ORIGINS`
+   is optional too — the `https://` origin is derived from each allowed host.
+   `DEFAULT_FROM_EMAIL` / `EMAIL_*` are optional (console backend by default).
+   Do **not** set `PORT` — Railway provides it.
 4. **Generate the public domain.** Web service → *Settings* → *Networking* →
-   *Generate Domain*. Copy that hostname into `DJANGO_ALLOWED_HOSTS` (step 3),
-   then redeploy.
+   *Generate Domain*. It works immediately — no variable to update.
 5. **Build & release run automatically (from `railway.json`):**
    * Build: `pip install -r requirements.txt && python manage.py collectstatic --noinput`.
    * Start: `python manage.py migrate --noinput && python manage.py init_superuser` then Gunicorn on `$PORT`.
@@ -494,12 +491,18 @@ PostgreSQL database. Nothing about the local SQLite workflow changes.
    Alternatively, run it once over SSH (non-interactive, so it won't drop):
    `railway ssh` → `python manage.py init_superuser`.
 
-**Checking / recovering admin access**
+**Diagnostics (over `railway ssh`, print no secrets)**
 
 ```bash
-railway ssh
-python manage.py check_superusers      # which DB? which superusers? (no secrets printed)
+python manage.py check_hosts        # resolved ALLOWED_HOSTS / CSRF / proxy + Railway host vars
+python manage.py check_superusers   # which DB? which superusers?
 ```
+
+A public URL returning **HTTP 400 "Bad request"** is `DisallowedHost`: the
+hostname in the address bar isn't in `ALLOWED_HOSTS`. `check_hosts` shows the
+resolved list; the deploy logs show `Invalid HTTP_HOST header: '<hostname>'`.
+On Railway the `*.railway.app` namespace is always trusted, so this should only
+happen with a mistyped **custom** domain.
 
 If no usable superuser is listed (or you lost the password), set
 `DJANGO_SUPERUSER_USERNAME` / `_PASSWORD` (/ `_EMAIL`) in Variables and run:
@@ -522,6 +525,7 @@ using a throwaway SQLite file).
 | Build | `pip install -r requirements.txt && python manage.py collectstatic --noinput` |
 | Start | `python manage.py migrate --noinput && python manage.py init_superuser && gunicorn insurancemanagement.wsgi:application --bind 0.0.0.0:$PORT --workers 3 --access-logfile - --error-logfile -` |
 | First superuser | set `DJANGO_SUPERUSER_*` vars, redeploy (or `railway ssh` → `python manage.py init_superuser`) |
+| Diagnose a 400 / host issue | `railway ssh` → `python manage.py check_hosts` |
 | Diagnose admin access | `railway ssh` → `python manage.py check_superusers` |
 | Reset a lost admin password | set `DJANGO_SUPERUSER_*` vars → `railway ssh` → `python manage.py init_superuser --force` |
 | Extra superuser (interactive) | `railway ssh` → `python manage.py createsuperuser` |
