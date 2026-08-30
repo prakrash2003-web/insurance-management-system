@@ -240,13 +240,16 @@ The parts most worth looking at in a review:
 | Forms | `django-widget-tweaks` |
 | Static files | WhiteNoise (compressed serving, works without a web server) |
 | Images | Pillow |
-| Database | SQLite by default; any `DATABASE_URL` (e.g. PostgreSQL) |
+| Database | SQLite by default; PostgreSQL in production via `DATABASE_URL` (`psycopg2`) |
+| Prod server | Gunicorn |
+| Hosting | Railway (`railway.json`, `runtime.txt`) |
 | Frontend | Server-rendered Django templates + one hand-written CSS file + vanilla JS |
 | Tests | Django test framework (32 tests) |
 
 > **Python version.** Django 4.2 LTS supports Python 3.8–3.12; any version in
 > that range works. The bundled virtualenv uses 3.8, so Pillow is pinned to
-> 10.4.0 (the last series supporting 3.8).
+> 10.4.0 (the last series supporting 3.8). Railway deploys build on
+> **Python 3.12** (`runtime.txt`); `psycopg2-binary` is skipped on Windows.
 
 ---
 
@@ -374,10 +377,12 @@ Everything is read from `.env` (see `.env.example` for the annotated list):
 | `DJANGO_DEBUG` | Debug mode | `False` |
 | `DJANGO_ALLOWED_HOSTS` | Comma-separated hostnames | `127.0.0.1,localhost` |
 | `DJANGO_CSRF_TRUSTED_ORIGINS` | Comma-separated origins (with scheme) | empty |
-| `DATABASE_URL` | DB connection URL; blank ⇒ local SQLite | SQLite |
+| `DATABASE_URL` | DB connection URL (`postgres://…`); blank ⇒ local SQLite | SQLite |
+| `DJANGO_DB_CONN_MAX_AGE` | Persistent DB connection lifetime, seconds | `0` |
 | `EMAIL_BACKEND` | Email backend | console (prints to stdout) |
 | `DEFAULT_FROM_EMAIL` / `CONTACT_RECEIVING_EMAILS` | Contact form / reset addressing | — |
 | `DJANGO_SECURE_SSL_REDIRECT` | Force HTTPS (production only) | `True` when `DEBUG=False` |
+| `RAILWAY_PUBLIC_DOMAIN` | Injected by Railway; auto-trusted for hosts + CSRF | — |
 
 ## Running locally
 
@@ -415,6 +420,77 @@ engine (scoring + reasons + ordering), and the custom 403/404 pages.
 These credentials are **for local demos only**. In any real deployment, create
 accounts with `createsuperuser` / sign-up and do not run `seed_demo`.
 
+## Deployment (Railway)
+
+The project is ready to deploy on [Railway](https://railway.app) with a managed
+PostgreSQL database. Nothing about the local SQLite workflow changes.
+
+**What's in the repo for deployment**
+
+| File | Purpose |
+|---|---|
+| `requirements.txt` | adds `gunicorn` (WSGI server) and `psycopg2-binary` (Postgres driver, Linux only) |
+| `runtime.txt` | pins the build to `python-3.12.7` |
+| `railway.json` | start command (migrate + Gunicorn) and restart policy |
+| `settings.py` | already env-driven; auto-trusts `RAILWAY_PUBLIC_DOMAIN`; WhiteNoise for static |
+
+**Steps**
+
+1. **Create the project.** Railway → *New Project* → *Deploy from GitHub repo* →
+   pick `insurance-management-system`.
+2. **Add PostgreSQL.** In the project, *New* → *Database* → *Add PostgreSQL*.
+   Railway creates a `DATABASE_URL` variable; reference it on the web service:
+   in the web service → *Variables* → *New Variable* →
+   `DATABASE_URL` = `${{Postgres.DATABASE_URL}}` (Railway's reference syntax).
+3. **Set the web service variables** (service → *Variables*):
+
+   | Variable | Value |
+   |---|---|
+   | `DJANGO_SECRET_KEY` | a fresh 50-char key — `python -c "from django.core.management.utils import get_random_secret_key as k; print(k())"` |
+   | `DJANGO_DEBUG` | `False` |
+   | `DJANGO_ALLOWED_HOSTS` | `${{RAILWAY_PUBLIC_DOMAIN}}` (or your custom domain) |
+   | `DJANGO_CSRF_TRUSTED_ORIGINS` | `https://${{RAILWAY_PUBLIC_DOMAIN}}` |
+   | `DJANGO_DB_CONN_MAX_AGE` | `600` |
+   | `DATABASE_URL` | `${{Postgres.DATABASE_URL}}` |
+
+   `DEFAULT_FROM_EMAIL` / `EMAIL_*` are optional (email defaults to the console
+   backend). Do **not** set `PORT` — Railway provides it.
+4. **Generate the public domain.** Web service → *Settings* → *Networking* →
+   *Generate Domain*. Railway now sets `RAILWAY_PUBLIC_DOMAIN`, which the app
+   trusts automatically. Redeploy if the first deploy happened before this.
+5. **Build & release run automatically:**
+   * Build: installs `requirements.txt`, then `python manage.py collectstatic --noinput`.
+   * Start (`railway.json`): `python manage.py migrate --noinput` then Gunicorn.
+6. **Create an admin user** — one-off, from your machine with the Railway CLI:
+
+   ```bash
+   npm i -g @railway/cli      # once
+   railway link               # select the project
+   railway run python manage.py createsuperuser
+   ```
+
+   (or open the service's *Shell* in the Railway dashboard and run the same command.)
+
+**Commands reference**
+
+| Purpose | Command |
+|---|---|
+| Build | `pip install -r requirements.txt && python manage.py collectstatic --noinput` |
+| Start | `python manage.py migrate --noinput && gunicorn insurancemanagement.wsgi:application --bind 0.0.0.0:$PORT --workers 3 --access-logfile - --error-logfile -` |
+| Migrate (manual) | `railway run python manage.py migrate` |
+| Collectstatic (manual) | `railway run python manage.py collectstatic --noinput` |
+| Superuser | `railway run python manage.py createsuperuser` |
+
+**Notes**
+
+* Uploaded profile pictures are written to the container filesystem, which is
+  **ephemeral** — they are lost on redeploy. For persistence, add a Railway
+  **Volume** mounted at `/app/media`, or switch `MEDIA_ROOT` to object storage.
+  The feature degrades gracefully (a missing picture just shows initials).
+* `DEBUG` stays `False`; HTTPS redirect, HSTS and `Secure` cookies switch on
+  automatically. Railway terminates TLS and forwards `X-Forwarded-Proto`, which
+  `SECURE_PROXY_SSL_HEADER` already handles.
+
 ## Screenshots
 
 Run the app and sign in with the demo accounts:
@@ -440,6 +516,9 @@ _Add PNGs under `docs/` and link them here for the portfolio version._
 * `Claim` and `Notification` live in the `insurance` app rather than their own.
 * The recommendation engine is deliberately rule-based, not machine learning.
 * Profile picture is the only file upload; no claim/KYC document uploads.
+* On Railway the container filesystem is ephemeral, so uploaded profile pictures
+  do not survive a redeploy unless a Volume is mounted at the media directory
+  (see *Deployment*). The app handles a missing picture gracefully.
 
 ## Future improvements
 

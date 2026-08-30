@@ -48,8 +48,16 @@ if not SECRET_KEY:
         "For production: set the DJANGO_SECRET_KEY environment variable."
     )
 
-ALLOWED_HOSTS = env("DJANGO_ALLOWED_HOSTS")
-CSRF_TRUSTED_ORIGINS = env("DJANGO_CSRF_TRUSTED_ORIGINS")
+ALLOWED_HOSTS = list(env("DJANGO_ALLOWED_HOSTS"))
+CSRF_TRUSTED_ORIGINS = list(env("DJANGO_CSRF_TRUSTED_ORIGINS"))
+
+# Railway sets RAILWAY_PUBLIC_DOMAIN once a public domain is generated. Trust it
+# automatically so a deploy works without also copying the domain into
+# DJANGO_ALLOWED_HOSTS by hand.
+_railway_domain = env("RAILWAY_PUBLIC_DOMAIN", default="")
+if _railway_domain:
+    ALLOWED_HOSTS.append(_railway_domain)
+    CSRF_TRUSTED_ORIGINS.append(f"https://{_railway_domain}")
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -97,11 +105,18 @@ TEMPLATES = [
 WSGI_APPLICATION = "insurancemanagement.wsgi.application"
 
 # --- Database --------------------------------------------------------------
-# An empty/blank DATABASE_URL (e.g. a `.env` copied verbatim from the example)
-# falls back to local SQLite rather than producing an invalid config.
+# Uses DATABASE_URL when set (e.g. Railway's PostgreSQL: postgres://...), and
+# falls back to a local SQLite file when it is unset or blank - so local
+# development needs no database setup.
 _database_url = env("DATABASE_URL", default="").strip()
 _sqlite_url = f"sqlite:///{BASE_DIR / 'db.sqlite3'}"
 DATABASES = {"default": environ.Env.db_url_config(_database_url or _sqlite_url)}
+# Persistent connections + health checks help on a managed Postgres; harmless
+# for SQLite. CONN_MAX_AGE defaults to 0 (Django's default: close each request).
+DATABASES["default"]["CONN_MAX_AGE"] = env.int("DJANGO_DB_CONN_MAX_AGE", default=0)
+DATABASES["default"]["CONN_HEALTH_CHECKS"] = env.bool(
+    "DJANGO_DB_CONN_HEALTH_CHECKS", default=True
+)
 
 # --- Auth -----------------------------------------------------------------
 AUTH_PASSWORD_VALIDATORS = [

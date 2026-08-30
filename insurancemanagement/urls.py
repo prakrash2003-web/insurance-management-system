@@ -1,9 +1,9 @@
 from django.conf import settings
-from django.conf.urls.static import static
 from django.contrib import admin
 from django.contrib.auth import views as auth_views
-from django.urls import include, path
+from django.urls import include, path, re_path
 from django.views.generic.base import RedirectView
+from django.views.static import serve as serve_static
 
 from insurance import views
 
@@ -107,5 +107,14 @@ urlpatterns = [
     path("admin-claim/<int:pk>", views.admin_claim_detail_view, name="admin-claim-detail"),
 ]
 
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+# User-uploaded media (profile pictures). WhiteNoise handles /static/ only, so
+# Django serves /media/ itself. This is fine for a small single-server deploy;
+# for scale, move MEDIA_ROOT to object storage (S3 / Cloudinary). On Railway,
+# mount a Volume at the media directory so uploads survive redeploys.
+urlpatterns += [
+    re_path(
+        r"^media/(?P<path>.*)$",
+        serve_static,
+        {"document_root": settings.MEDIA_ROOT},
+    ),
+]
