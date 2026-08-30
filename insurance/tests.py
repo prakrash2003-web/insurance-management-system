@@ -101,6 +101,143 @@ class AuthTests(TestCase):
         self.assertEqual(r.status_code, 302)
 
 
+class AdminLoginFlowTests(TestCase):
+    """Reproduce the real POST -> /adminlogin -> dashboard flow (not force_login)."""
+
+    PW = "Adm1n-Correct-PW-2024!"
+
+    def setUp(self):
+        self.superuser = User.objects.create_superuser("admin", "admin@ex.com", self.PW)
+        self.staff = User.objects.create_user("stf", "stf@ex.com", self.PW, is_staff=True)
+        self.cust_user, _ = make_customer("normaluser")
+
+    def _post_login(self, username, password, follow=False):
+        return self.client.post(
+            reverse("adminlogin"),
+            {"username": username, "password": password},
+            follow=follow,
+        )
+
+    def test_authenticate_works_at_python_level(self):
+        from django.contrib.auth import authenticate
+        self.assertIsNotNone(authenticate(username="admin", password=self.PW))
+        self.assertTrue(self.superuser.is_active)
+        self.assertTrue(self.superuser.is_staff)
+        self.assertTrue(self.superuser.is_superuser)
+
+    def test_superuser_login_sets_session_and_redirects(self):
+        r = self._post_login("admin", self.PW)
+        self.assertEqual(r.status_code, 302, getattr(r, "context", None) and
+                         r.context["form"].errors)
+        self.assertIn("_auth_user_id", self.client.session)
+        self.assertEqual(int(self.client.session["_auth_user_id"]), self.superuser.pk)
+
+    def test_superuser_login_lands_on_admin_dashboard(self):
+        r = self._post_login("admin", self.PW, follow=True)
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.redirect_chain[-1][0], reverse("admin-dashboard"))
+
+    def test_staff_login_lands_on_admin_dashboard(self):
+        r = self._post_login("stf", self.PW, follow=True)
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.redirect_chain[-1][0], reverse("admin-dashboard"))
+
+    def test_wrong_password_is_rejected(self):
+        r = self._post_login("admin", "definitely-not-it")
+        self.assertEqual(r.status_code, 200)
+        self.assertNotIn("_auth_user_id", self.client.session)
+
+    def test_after_login_admin_pages_load(self):
+        self._post_login("admin", self.PW)
+        self.assertEqual(self.client.get(reverse("admin-view-policy")).status_code, 200)
+
+    def test_django_admin_login_also_works(self):
+        r = self.client.post("/admin/login/",
+                             {"username": "admin", "password": self.PW, "next": "/admin/"},
+                             follow=True)
+        self.assertEqual(r.status_code, 200)
+        self.assertIn("_auth_user_id", self.client.session)
+
+    def test_login_form_renders_csrf_and_correct_field_names(self):
+        import re
+        body = self.client.get(reverse("adminlogin")).content.decode()
+        self.assertIn('name="csrfmiddlewaretoken"', body)
+        names = set(re.findall(r'<input[^>]*\bname="([^"]+)"', body))
+        self.assertIn("username", names)
+        self.assertIn("password", names)
+
+    def test_login_with_csrf_enforced_client(self):
+        import re
+        from django.test import Client
+        csrf_client = Client(enforce_csrf_checks=True)
+        page = csrf_client.get(reverse("adminlogin"))
+        token = re.search(
+            r'name="csrfmiddlewaretoken" value="([^"]+)"', page.content.decode()
+        ).group(1)
+        r = csrf_client.post(
+            reverse("adminlogin"),
+            {"username": "admin", "password": self.PW, "csrfmiddlewaretoken": token},
+            follow=True,
+        )
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.redirect_chain[-1][0], reverse("admin-dashboard"))
+        self.assertIn("_auth_user_id", csrf_client.session)
+
+    def test_non_staff_rejected_at_admin_login_form(self):
+        # A customer's correct password is not enough: the admin login form
+        # requires is_staff (same rule as Django's /admin/).
+        r = self._post_login("normaluser", "Str0ngPass!23")
+        self.assertEqual(r.status_code, 200)
+        self.assertNotIn("_auth_user_id", self.client.session)
+
+    def test_inactive_staff_cannot_log_in(self):
+        self.staff.is_active = False
+        self.staff.save()
+        r = self._post_login("stf", self.PW)
+        self.assertEqual(r.status_code, 200)
+        self.assertNotIn("_auth_user_id", self.client.session)
+
+    def test_home_does_not_loop_for_roleless_authenticated_user(self):
+        roleless = User.objects.create_user("noroleuser", "n@ex.com", self.PW)
+        self.client.force_login(roleless)
+        r = self.client.get(reverse("home"))          # must not 302 -> afterlogin -> home ...
+        self.assertEqual(r.status_code, 200)
+        r2 = self.client.get(reverse("afterlogin"), follow=True)
+        self.assertLessEqual(len(r2.redirect_chain), 2)
+        self.assertEqual(r2.status_code, 200)
+
+    def test_logout_clears_session(self):
+        self._post_login("admin", self.PW)
+        self.assertIn("_auth_user_id", self.client.session)
+        self.client.post(reverse("logout"))
+        self.assertNotIn("_auth_user_id", self.client.session)
+
+
+class CheckLoginCommandTests(TestCase):
+    def _run(self, **kwargs):
+        out = StringIO()
+        call_command("check_login", stdout=out, stderr=out, **kwargs)
+        return out.getvalue()
+
+    def test_reports_valid_admin_credentials_without_printing_password(self):
+        User.objects.create_superuser("adm", "adm@ex.com", "Right-PW-123!")
+        text = self._run(username="adm", password="Right-PW-123!")
+        self.assertNotIn("Right-PW-123!", text)
+        self.assertIn("password matches    : True", text)
+        self.assertIn("authenticate()      : True", text)
+        self.assertIn("valid for the admin login", text)
+
+    def test_reports_wrong_password(self):
+        User.objects.create_superuser("adm", "adm@ex.com", "Right-PW-123!")
+        text = self._run(username="adm", password="wrong-one")
+        self.assertIn("password matches    : False", text)
+        self.assertIn("does NOT match", text)
+
+    def test_reports_missing_user(self):
+        text = self._run(username="ghost", password="whatever")
+        self.assertIn("user exists         : False", text)
+
+
 class PolicyAdminTests(BaseData):
     def test_admin_creates_policy_with_category(self):
         self.client.force_login(self.admin_user)

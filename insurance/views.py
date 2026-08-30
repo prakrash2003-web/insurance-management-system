@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.contrib import messages
+from django.contrib.admin.forms import AdminAuthenticationForm
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import LoginView
 from django.core.mail import BadHeaderError, send_mail
@@ -20,7 +21,12 @@ from .utils import paginate
 # Public site
 # ---------------------------------------------------------------------------
 def home_view(request):
-    if request.user.is_authenticated:
+    # Only bounce users who actually have a dashboard. A logged-in account with
+    # no role stays on the public home page (redirecting it to /afterlogin - which
+    # would redirect back here - was an infinite loop).
+    if request.user.is_authenticated and (
+        request.user.is_staff or is_customer(request.user)
+    ):
         return redirect("afterlogin")
     return render(request, "insurance/index.html")
 
@@ -69,6 +75,10 @@ def afterlogin_view(request):
 
 class AdminLoginView(LoginView):
     template_name = "registration/admin_login.html"
+    # Same form Django's own /admin/ uses: standard authenticate() +
+    # ModelBackend, plus an is_staff requirement. A non-staff account is
+    # rejected here (it should use the customer login).
+    authentication_form = AdminAuthenticationForm
     redirect_authenticated_user = True
 
 

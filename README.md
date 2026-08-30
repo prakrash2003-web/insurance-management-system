@@ -337,6 +337,10 @@ auth.User 1───* Notification
   `AUTH_PASSWORD_VALIDATORS`.
 * **Administrator** = authenticated with `is_staff=True` (`createsuperuser`,
   `init_superuser`, or `seed_demo`).
+* Both `/adminlogin` (the app's admin page) and `/admin/` use the **same**
+  auth path: Django's `AdminAuthenticationForm` → `authenticate()` →
+  `ModelBackend` (default `User` table, PBKDF2 password check, `is_active` +
+  `is_staff` required). No custom backend, no custom admin/credential model.
 * `/afterlogin` routes each user to the right dashboard.
 * Password change and reset use Django's built-in views with custom templates.
 
@@ -496,6 +500,7 @@ PostgreSQL database. Nothing about the local SQLite workflow changes.
 ```bash
 python manage.py check_hosts        # resolved ALLOWED_HOSTS / CSRF / proxy + Railway host vars
 python manage.py check_superusers   # which DB? which superusers?
+python manage.py check_login --username admin   # do these credentials authenticate? (no password printed)
 ```
 
 A public URL returning **HTTP 400 "Bad request"** is `DisallowedHost`: the
@@ -527,6 +532,7 @@ using a throwaway SQLite file).
 | First superuser | set `DJANGO_SUPERUSER_*` vars, redeploy (or `railway ssh` → `python manage.py init_superuser`) |
 | Diagnose a 400 / host issue | `railway ssh` → `python manage.py check_hosts` |
 | Diagnose admin access | `railway ssh` → `python manage.py check_superusers` |
+| "Correct password rejected" | `railway ssh` → `DJANGO_SUPERUSER_PASSWORD=… python manage.py check_login --username admin` |
 | Reset a lost admin password | set `DJANGO_SUPERUSER_*` vars → `railway ssh` → `python manage.py init_superuser --force` |
 | Extra superuser (interactive) | `railway ssh` → `python manage.py createsuperuser` |
 
