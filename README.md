@@ -248,9 +248,9 @@ The parts most worth looking at in a review:
 
 > **Python version.** Django 4.2 LTS supports Python 3.8–3.12; any version in
 > that range works. The bundled virtualenv uses 3.8, so Pillow is pinned to
-> 10.4.0 (the last series supporting 3.8). Railway builds on the latest
-> **Python 3.12.x** — `.python-version` pins the minor series and lets the
-> builder pick the newest patch. `psycopg2-binary` is skipped on Windows.
+> 10.4.0 (the last series supporting 3.8). Railway builds on **Python 3.12**
+> (`.python-version`, via the Nixpacks builder). `psycopg2-binary` is skipped on
+> Windows (SQLite locally).
 
 ---
 
@@ -431,9 +431,14 @@ PostgreSQL database. Nothing about the local SQLite workflow changes.
 | File | Purpose |
 |---|---|
 | `requirements.txt` | adds `gunicorn` (WSGI server) and `psycopg2-binary` (Postgres driver, Linux only) |
-| `.python-version` | pins the build to Python `3.12` (latest patch, chosen by the builder) |
-| `railway.json` | start command (migrate + Gunicorn) and restart policy |
+| `.python-version` | Python `3.12` for the build |
+| `railway.json` | builder (**Nixpacks**), build command, start command (migrate + Gunicorn), restart policy |
 | `settings.py` | already env-driven; auto-trusts `RAILWAY_PUBLIC_DOMAIN`; WhiteNoise for static |
+
+> **Builder note.** `railway.json` sets `"builder": "NIXPACKS"`. Railway's newer
+> default builder (Railpack) provisions Python with `mise`, which rejects older
+> CPython artifacts that lack GitHub attestations (e.g. 3.12.7). Nixpacks uses
+> Nix packages instead and is unaffected.
 
 **Steps**
 
@@ -459,9 +464,9 @@ PostgreSQL database. Nothing about the local SQLite workflow changes.
 4. **Generate the public domain.** Web service → *Settings* → *Networking* →
    *Generate Domain*. Railway now sets `RAILWAY_PUBLIC_DOMAIN`, which the app
    trusts automatically. Redeploy if the first deploy happened before this.
-5. **Build & release run automatically:**
-   * Build: installs `requirements.txt`, then `python manage.py collectstatic --noinput`.
-   * Start (`railway.json`): `python manage.py migrate --noinput` then Gunicorn.
+5. **Build & release run automatically (from `railway.json`):**
+   * Build: `pip install -r requirements.txt && python manage.py collectstatic --noinput`.
+   * Start: `python manage.py migrate --noinput` then Gunicorn on `$PORT`.
 6. **Create an admin user** — one-off, from your machine with the Railway CLI:
 
    ```bash
