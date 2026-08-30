@@ -334,8 +334,8 @@ auth.User 1───* Notification
 * **Customer** = authenticated, `is_staff=False`, in the `CUSTOMER` group, with a
   `Customer` row. Sign-up creates all three atomically and enforces
   `AUTH_PASSWORD_VALIDATORS`.
-* **Administrator** = authenticated with `is_staff=True` (`createsuperuser` or
-  `seed_demo`).
+* **Administrator** = authenticated with `is_staff=True` (`createsuperuser`,
+  `init_superuser`, or `seed_demo`).
 * `/afterlogin` routes each user to the right dashboard.
 * Password change and reset use Django's built-in views with custom templates.
 
@@ -383,6 +383,7 @@ Everything is read from `.env` (see `.env.example` for the annotated list):
 | `EMAIL_BACKEND` | Email backend | console (prints to stdout) |
 | `DEFAULT_FROM_EMAIL` / `CONTACT_RECEIVING_EMAILS` | Contact form / reset addressing | — |
 | `DJANGO_SECURE_SSL_REDIRECT` | Force HTTPS (production only) | `True` when `DEBUG=False` |
+| `DJANGO_SUPERUSER_USERNAME` / `_EMAIL` / `_PASSWORD` | One-off: read by `init_superuser` to create the first admin. Remove the password var afterwards. | — |
 | `RAILWAY_PUBLIC_DOMAIN` | Injected by Railway when present; auto-trusted for hosts + CSRF | — |
 | `RAILWAY_ENVIRONMENT_NAME` | Injected by Railway; triggers the `*.up.railway.app` host fallback | — |
 
@@ -473,26 +474,33 @@ PostgreSQL database. Nothing about the local SQLite workflow changes.
    then redeploy.
 5. **Build & release run automatically (from `railway.json`):**
    * Build: `pip install -r requirements.txt && python manage.py collectstatic --noinput`.
-   * Start: `python manage.py migrate --noinput` then Gunicorn on `$PORT`.
-6. **Create an admin user** — one-off, from your machine with the Railway CLI:
+   * Start: `python manage.py migrate --noinput && python manage.py init_superuser` then Gunicorn on `$PORT`.
+6. **Create the first admin user** — no shell needed. On the service → *Variables*,
+   add:
 
-   ```bash
-   npm i -g @railway/cli      # once
-   railway link               # select the project
-   railway run python manage.py createsuperuser
-   ```
+   | Variable | Value |
+   |---|---|
+   | `DJANGO_SUPERUSER_USERNAME` | e.g. `admin` |
+   | `DJANGO_SUPERUSER_EMAIL` | your email (optional) |
+   | `DJANGO_SUPERUSER_PASSWORD` | a strong password |
 
-   (or open the service's *Shell* in the Railway dashboard and run the same command.)
+   Redeploy. The `init_superuser` step in the start command creates the account
+   on first boot (it is **idempotent** — it does nothing if the user already
+   exists, and nothing if the variables are unset, so it is safe to leave in
+   place). **After the first successful deploy, delete
+   `DJANGO_SUPERUSER_PASSWORD`** from Variables.
+
+   Alternatively, run it once over SSH (non-interactive, so it won't drop):
+   `railway ssh` → `python manage.py init_superuser`.
 
 **Commands reference**
 
 | Purpose | Command |
 |---|---|
 | Build | `pip install -r requirements.txt && python manage.py collectstatic --noinput` |
-| Start | `python manage.py migrate --noinput && gunicorn insurancemanagement.wsgi:application --bind 0.0.0.0:$PORT --workers 3 --access-logfile - --error-logfile -` |
-| Migrate (manual) | `railway run python manage.py migrate` |
-| Collectstatic (manual) | `railway run python manage.py collectstatic --noinput` |
-| Superuser | `railway run python manage.py createsuperuser` |
+| Start | `python manage.py migrate --noinput && python manage.py init_superuser && gunicorn insurancemanagement.wsgi:application --bind 0.0.0.0:$PORT --workers 3 --access-logfile - --error-logfile -` |
+| First superuser | set `DJANGO_SUPERUSER_*` vars, redeploy (or `railway ssh` → `python manage.py init_superuser`) |
+| Extra superuser (interactive) | `railway ssh` → `python manage.py createsuperuser` |
 
 **Notes**
 

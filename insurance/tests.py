@@ -1,6 +1,9 @@
 from decimal import Decimal
+from io import StringIO
+from unittest import mock
 
 from django.contrib.auth.models import Group, User
+from django.core.management import call_command
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
@@ -306,3 +309,45 @@ class ErrorPageTests(BaseData):
         r = self.client.get("/favicon.ico")
         self.assertEqual(r.status_code, 301)
         self.assertTrue(r.url.endswith("/static/favicon.svg"))
+
+
+class InitSuperuserCommandTests(TestCase):
+    _KEYS = ("DJANGO_SUPERUSER_USERNAME", "DJANGO_SUPERUSER_PASSWORD",
+             "DJANGO_SUPERUSER_EMAIL")
+
+    def _run(self, **env):
+        base = {k: "" for k in self._KEYS}  # start from a clean slate
+        base.update(env)
+        out, err = StringIO(), StringIO()
+        with mock.patch.dict("os.environ", base, clear=False):
+            call_command("init_superuser", stdout=out, stderr=err)
+        return out.getvalue() + err.getvalue()
+
+    def test_noop_without_env_vars(self):
+        output = self._run()
+        self.assertIn("skipping", output)
+        self.assertFalse(User.objects.filter(is_superuser=True).exists())
+
+    def test_creates_superuser_from_env(self):
+        output = self._run(
+            DJANGO_SUPERUSER_USERNAME="opsadmin",
+            DJANGO_SUPERUSER_EMAIL="ops@example.com",
+            DJANGO_SUPERUSER_PASSWORD="a-strong-secret-pw-1234",
+        )
+        self.assertNotIn("a-strong-secret-pw-1234", output)  # never logs the password
+        u = User.objects.get(username="opsadmin")
+        self.assertTrue(u.is_superuser and u.is_staff and u.is_active)
+        self.assertTrue(u.check_password("a-strong-secret-pw-1234"))
+        self.assertEqual(u.email, "ops@example.com")
+
+    def test_idempotent_and_does_not_change_existing_password(self):
+        User.objects.create_superuser("opsadmin", "ops@example.com", "original-pw-1234")
+        output = self._run(
+            DJANGO_SUPERUSER_USERNAME="opsadmin",
+            DJANGO_SUPERUSER_PASSWORD="attempted-new-pw-9999",
+        )
+        self.assertIn("already exists", output)
+        u = User.objects.get(username="opsadmin")
+        self.assertTrue(u.check_password("original-pw-1234"))
+        self.assertFalse(u.check_password("attempted-new-pw-9999"))
+        self.assertEqual(User.objects.filter(username="opsadmin").count(), 1)
