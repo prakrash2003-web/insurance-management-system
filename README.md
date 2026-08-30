@@ -219,8 +219,9 @@ The parts most worth looking at in a review:
   `disapprove()` methods that also manage cover dates, and computed properties
   (`days_to_expiry`, `is_expired`, `needs_renewal`, `renewal_status`).
 * **Environment config** – `django-environ` with safe defaults; a blank
-  `DATABASE_URL` falls back to SQLite instead of crashing; the missing-key error
-  message tells you exactly what to do.
+  `DATABASE_URL` falls back to SQLite for local dev but is *required* on Railway
+  (no silent ephemeral database); actionable error messages for the common
+  misconfigurations.
 * **Design system in one file** – `static/css/app.css` (CSS custom properties,
   ~1 accent colour, no framework, no CDN) + `static/js/app.js` for progressive
   enhancement (mobile nav, confirmation modals, comparison picker). Custom
@@ -378,7 +379,7 @@ Everything is read from `.env` (see `.env.example` for the annotated list):
 | `DJANGO_DEBUG` | Debug mode | `False` |
 | `DJANGO_ALLOWED_HOSTS` | Comma-separated hostnames (whitespace/blank-tolerant) | `127.0.0.1,localhost` |
 | `DJANGO_CSRF_TRUSTED_ORIGINS` | Extra origins (with scheme); each allowed host is trusted automatically | derived from hosts |
-| `DATABASE_URL` | DB connection URL (`postgres://…`); blank ⇒ local SQLite | SQLite |
+| `DATABASE_URL` | DB connection URL (`postgres://…`). Blank ⇒ local SQLite, **except on Railway where it is required** (blank would mean an ephemeral SQLite file). | SQLite |
 | `DJANGO_DB_CONN_MAX_AGE` | Persistent DB connection lifetime, seconds | `0` |
 | `EMAIL_BACKEND` | Email backend | console (prints to stdout) |
 | `DEFAULT_FROM_EMAIL` / `CONTACT_RECEIVING_EMAILS` | Contact form / reset addressing | — |
@@ -493,6 +494,27 @@ PostgreSQL database. Nothing about the local SQLite workflow changes.
    Alternatively, run it once over SSH (non-interactive, so it won't drop):
    `railway ssh` → `python manage.py init_superuser`.
 
+**Checking / recovering admin access**
+
+```bash
+railway ssh
+python manage.py check_superusers      # which DB? which superusers? (no secrets printed)
+```
+
+If no usable superuser is listed (or you lost the password), set
+`DJANGO_SUPERUSER_USERNAME` / `_PASSWORD` (/ `_EMAIL`) in Variables and run:
+
+```bash
+python manage.py init_superuser --force   # create if missing; else reset password + re-grant flags
+```
+
+Then delete `DJANGO_SUPERUSER_PASSWORD` again. Deleting the `DJANGO_SUPERUSER_*`
+variables never removes the user row — it only stops `init_superuser` from
+acting. A "missing" superuser almost always means the app is pointed at the
+wrong database: check that `DATABASE_URL` is set to `${{Postgres.DATABASE_URL}}`
+(the app refuses to start on Railway without it, precisely to avoid silently
+using a throwaway SQLite file).
+
 **Commands reference**
 
 | Purpose | Command |
@@ -500,6 +522,8 @@ PostgreSQL database. Nothing about the local SQLite workflow changes.
 | Build | `pip install -r requirements.txt && python manage.py collectstatic --noinput` |
 | Start | `python manage.py migrate --noinput && python manage.py init_superuser && gunicorn insurancemanagement.wsgi:application --bind 0.0.0.0:$PORT --workers 3 --access-logfile - --error-logfile -` |
 | First superuser | set `DJANGO_SUPERUSER_*` vars, redeploy (or `railway ssh` → `python manage.py init_superuser`) |
+| Diagnose admin access | `railway ssh` → `python manage.py check_superusers` |
+| Reset a lost admin password | set `DJANGO_SUPERUSER_*` vars → `railway ssh` → `python manage.py init_superuser --force` |
 | Extra superuser (interactive) | `railway ssh` → `python manage.py createsuperuser` |
 
 **Notes**

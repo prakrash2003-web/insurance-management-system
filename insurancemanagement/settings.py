@@ -131,6 +131,17 @@ WSGI_APPLICATION = "insurancemanagement.wsgi.application"
 # development needs no database setup.
 _database_url = env("DATABASE_URL", default="").strip()
 _sqlite_url = f"sqlite:///{BASE_DIR / 'db.sqlite3'}"
+
+# On Railway the container filesystem is ephemeral: an unset DATABASE_URL would
+# silently put the app on a throwaway SQLite file that is wiped (with its users
+# and data) on every deploy. Fail fast instead of causing quiet data loss.
+if _on_railway and not _database_url:
+    raise RuntimeError(
+        "DATABASE_URL is not set in the Railway environment.\n"
+        "Add it to the service Variables as  DATABASE_URL=${{Postgres.DATABASE_URL}}  "
+        "(referencing your PostgreSQL service), then redeploy."
+    )
+
 DATABASES = {"default": environ.Env.db_url_config(_database_url or _sqlite_url)}
 # Persistent connections + health checks help on a managed Postgres; harmless
 # for SQLite. CONN_MAX_AGE defaults to 0 (Django's default: close each request).

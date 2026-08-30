@@ -315,12 +315,12 @@ class InitSuperuserCommandTests(TestCase):
     _KEYS = ("DJANGO_SUPERUSER_USERNAME", "DJANGO_SUPERUSER_PASSWORD",
              "DJANGO_SUPERUSER_EMAIL")
 
-    def _run(self, **env):
+    def _run(self, *args, **env):
         base = {k: "" for k in self._KEYS}  # start from a clean slate
         base.update(env)
         out, err = StringIO(), StringIO()
         with mock.patch.dict("os.environ", base, clear=False):
-            call_command("init_superuser", stdout=out, stderr=err)
+            call_command("init_superuser", *args, stdout=out, stderr=err)
         return out.getvalue() + err.getvalue()
 
     def test_noop_without_env_vars(self):
@@ -351,3 +351,48 @@ class InitSuperuserCommandTests(TestCase):
         self.assertTrue(u.check_password("original-pw-1234"))
         self.assertFalse(u.check_password("attempted-new-pw-9999"))
         self.assertEqual(User.objects.filter(username="opsadmin").count(), 1)
+
+    def test_force_resets_password_and_regrants_flags(self):
+        u = User.objects.create_user("opsadmin", "ops@example.com", "original-pw-1234")
+        u.is_staff = u.is_superuser = False
+        u.is_active = False
+        u.save()
+        output = self._run(
+            "--force",
+            DJANGO_SUPERUSER_USERNAME="opsadmin",
+            DJANGO_SUPERUSER_PASSWORD="recovered-pw-5678",
+        )
+        self.assertNotIn("recovered-pw-5678", output)
+        u.refresh_from_db()
+        self.assertTrue(u.check_password("recovered-pw-5678"))
+        self.assertFalse(u.check_password("original-pw-1234"))
+        self.assertTrue(u.is_staff and u.is_superuser and u.is_active)
+        self.assertEqual(User.objects.filter(username="opsadmin").count(), 1)
+
+    def test_force_creates_when_missing(self):
+        output = self._run(
+            "--force",
+            DJANGO_SUPERUSER_USERNAME="opsadmin",
+            DJANGO_SUPERUSER_PASSWORD="fresh-pw-0000",
+        )
+        self.assertNotIn("fresh-pw-0000", output)
+        u = User.objects.get(username="opsadmin")
+        self.assertTrue(u.is_superuser and u.is_staff and u.is_active)
+
+
+class CheckSuperusersCommandTests(TestCase):
+    def test_reports_superuser_without_leaking_secrets(self):
+        User.objects.create_superuser("boss", "boss@example.com", "sekret-pw-2468")
+        out = StringIO()
+        call_command("check_superusers", stdout=out)
+        text = out.getvalue()
+        self.assertIn("'boss'", text)
+        self.assertIn("is_superuser=True", text)
+        self.assertNotIn("sekret-pw-2468", text)
+        self.assertNotIn("pbkdf2", text)  # no password hash
+        self.assertIn("usable superuser exists", text)
+
+    def test_reports_when_no_superuser(self):
+        out = StringIO()
+        call_command("check_superusers", stdout=out)
+        self.assertIn("No superusers found", out.getvalue())
