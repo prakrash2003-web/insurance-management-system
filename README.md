@@ -550,7 +550,37 @@ using a throwaway SQLite file).
 
 ## Screenshots
 
-Run the app and sign in with the demo accounts:
+### Homepage
+
+![Insurance Management System Homepage](docs/screenshots/homepage.png)
+
+### Customer Dashboard
+
+![Customer Dashboard](docs/screenshots/customer-dashboard.png)
+
+### Insurance Policies
+
+![Insurance Policies](docs/screenshots/policies.png)
+
+### Premium Calculator
+
+![Premium Calculator](docs/screenshots/premium-calculator.png)
+
+### Policy Recommendations
+
+![Policy Recommendations](docs/screenshots/recommendations.png)
+
+### Claims
+
+![Claims Management](docs/screenshots/claims.png)
+
+### Admin Dashboard
+
+![Admin Dashboard](docs/screenshots/admin-dashboard.png)
+
+### Application Management
+
+![Application Management](docs/screenshots/applications.png)
 
 | Page | Path |
 |---|---|
