@@ -16,7 +16,8 @@ templates · 32 automated tests · `manage.py check --deploy` clean.
 
 ---
 ## 🚀 Live Demo
-insurance-management-system-production-19d4.up.railway.app
+
+[Visit the Live Application](https://insurance-management-system-production-19d4.up.railway.app/)
 
 ## Problem statement
 
