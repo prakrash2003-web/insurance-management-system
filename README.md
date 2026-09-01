@@ -549,39 +549,31 @@ using a throwaway SQLite file).
   automatically. Railway terminates TLS and forwards `X-Forwarded-Proto`, which
   `SECURE_PROXY_SSL_HEADER` already handles.
 
-## Screenshots
+## Application Screenshots
 
 ### Homepage
-
-![Insurance Management System Homepage](docs/screenshots/homepage.png)
+![Homepage](docs/Screenshots/homepage.png)
 
 ### Customer Dashboard
-
-![Customer Dashboard](docs/screenshots/customer-dashboard.png)
+![Customer Dashboard](docs/Screenshots/customer-dashboard.png)
 
 ### Insurance Policies
-
-![Insurance Policies](docs/screenshots/policies.png)
+![Insurance Policies](docs/Screenshots/policies.png)
 
 ### Premium Calculator
-
-![Premium Calculator](docs/screenshots/premium-calculator.png)
+![Premium Calculator](docs/Screenshots/premium-calculator.png)
 
 ### Policy Recommendations
+![Policy Recommendations](docs/Screenshots/recommendations.png)
 
-![Policy Recommendations](docs/screenshots/recommendations.png)
+### Claims Management
+![Claims Management](docs/Screenshots/claims.png)
 
-### Claims
-
-![Claims Management](docs/screenshots/claims.png)
+### Applications
+![Applications](docs/Screenshots/applications.png)
 
 ### Admin Dashboard
-
-![Admin Dashboard](docs/screenshots/admin-dashboard.png)
-
-### Application Management
-
-![Application Management](docs/screenshots/applications.png)
+![Admin Dashboard](docs/Screenshots/admin-dashboard.png)
 
 | Page | Path |
 |---|---|
